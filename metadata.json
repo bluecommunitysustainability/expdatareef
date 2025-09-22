@@ -1,0 +1,5 @@
+{
+  "name": "Export DataReef Sustainability Dashboard",
+  "description": "A comprehensive tool to assess and track sustainability metrics for various tourist destinations in Florida. Users can fill out a detailed questionnaire, save progress, and export the data.",
+  "requestFramePermissions": []
+}

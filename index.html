@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sustainability Dashboard</title>
+    <link rel="manifest" href="./manifest.json" />
+    <meta name="theme-color" content="#0a0a0a" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
+    <style>
+      /* Custom scrollbar for better dark mode aesthetics */
+      body {
+        scrollbar-width: thin;
+        scrollbar-color: #4a5568 #1a202c;
+      }
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #1f2937; /* bg-gray-800 */
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #4b5563; /* bg-gray-600 */
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #6b7280; /* bg-gray-500 */
+      }
+      .mapboxgl-popup-content {
+        background-color: #2d3748; /* bg-gray-700 */
+        color: #e2e8f0; /* text-gray-200 */
+        padding: 10px 15px;
+        border-radius: 6px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      }
+      .mapboxgl-popup-close-button {
+        color: #e2e8f0;
+      }
+      .mapboxgl-popup-anchor-top .mapboxgl-popup-tip,
+      .mapboxgl-popup-anchor-top-left .mapboxgl-popup-tip,
+      .mapboxgl-popup-anchor-top-right .mapboxgl-popup-tip {
+        border-bottom-color: #2d3748;
+      }
+      .mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip,
+      .mapboxgl-popup-anchor-bottom-left .mapboxgl-popup-tip,
+      .mapboxgl-popup-anchor-bottom-right .mapboxgl-popup-tip {
+        border-top-color: #2d3748;
+      }
+      .mapboxgl-popup-anchor-left .mapbox-popup-tip {
+        border-right-color: #2d3748;
+      }
+      .mapboxgl-popup-anchor-right .mapbox-popup-tip {
+        border-left-color: #2d3748;
+      }
+      @keyframes fade-in {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .animate-fade-in {
+        animation: fade-in 0.4s ease-in-out forwards;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-900">
+    <div id="root"></div>
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "https://aistudiocdn.com/react@^19.1.1",
+          "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
+          "react/": "https://aistudiocdn.com/react@^19.1.1/",
+          "@google/genai": "https://aistudiocdn.com/@google/genai@^1.19.0",
+          "react-dom": "https://aistudiocdn.com/react-dom@^19.1.1",
+          "idb-keyval": "https://aistudiocdn.com/idb-keyval@^6.2.2",
+          "xlsx": "https://aistudiocdn.com/xlsx@^0.18.5",
+          "react-map-gl": "https://aistudiocdn.com/react-map-gl@^7.1.7",
+          "mapbox-gl": "https://aistudiocdn.com/mapbox-gl@^3.1.2",
+          "recharts": "https://aistudiocdn.com/recharts@^2.12.7"
+        }
+      }
+    </script>
+    <script type="module" src="./index.tsx"></script>
+  </body>
+</html>
