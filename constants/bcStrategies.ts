@@ -1,4 +1,3 @@
-
 import type { BcStrategy } from '../types';
 
 export const bcStrategies: BcStrategy[] = [

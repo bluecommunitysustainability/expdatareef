@@ -1,13 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { ApiKeys } from '../types';
 import { useTheme } from '../context/ThemeContext';
+import { availableThemes } from '../constants/teamColors';
 
 interface SettingsPanelProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (settings: { keys: ApiKeys, model: string }) => void;
+  onSave: (settings: { keys: ApiKeys, model: string, logo?: string | null, color?: string }) => void;
   currentKeys: ApiKeys;
   currentModel: string;
+  currentLogo?: string | null;
+  currentColor?: string;
 }
 
 export const SettingsPanel: React.FC<SettingsPanelProps> = ({
@@ -15,24 +18,42 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   onClose,
   onSave,
   currentKeys,
-  currentModel
+  currentModel,
+  currentLogo,
+  currentColor,
 }) => {
   const [keys, setKeys] = useState<ApiKeys>(currentKeys);
   const [model, setModel] = useState(currentModel);
+  const [logo, setLogo] = useState<string | null | undefined>(currentLogo);
+  const [color, setColor] = useState<string | undefined>(currentColor);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const theme = useTheme();
 
   useEffect(() => {
     setKeys(currentKeys);
     setModel(currentModel);
-  }, [isOpen, currentKeys, currentModel]);
+    setLogo(currentLogo);
+    setColor(currentColor);
+  }, [isOpen, currentKeys, currentModel, currentLogo, currentColor]);
 
   const handleSave = () => {
-    onSave({ keys, model });
+    onSave({ keys, model, logo, color });
     onClose();
   };
 
   const handleKeyChange = (provider: keyof ApiKeys, value: string) => {
     setKeys(prev => ({ ...prev, [provider]: value }));
+  };
+
+  const handleLogoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLogo(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   return (
@@ -52,20 +73,59 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
         </header>
 
         <main className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold text-gray-200 border-b border-gray-700 pb-2">Branding</h3>
+             <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Custom Logo</label>
+              <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 bg-gray-700 rounded-md flex items-center justify-center">
+                      {logo ? <img src={logo} alt="Custom Logo Preview" className="max-w-full max-h-full object-contain" /> : <span className="text-gray-400 text-xs">Logo</span>}
+                  </div>
+                  <div className="flex-1">
+                      <input type="file" accept="image/png, image/jpeg, image/gif, image/svg+xml" ref={fileInputRef} onChange={handleLogoChange} className="hidden" />
+                      <button onClick={() => fileInputRef.current?.click()} className="px-3 py-2 text-sm bg-gray-600 hover:bg-gray-500 rounded-md">Upload Logo</button>
+                      {logo && <button onClick={() => setLogo(null)} className="px-3 py-2 text-sm text-red-500 hover:text-red-400 rounded-md ml-2">Remove</button>}
+                  </div>
+              </div>
+            </div>
+             <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Primary Color</label>
+              <div className="flex flex-wrap gap-3">
+                  {availableThemes.map(themeOption => (
+                      <button 
+                          key={themeOption.value}
+                          onClick={() => setColor(themeOption.value)}
+                          className={`w-8 h-8 rounded-full focus:outline-none ring-2 ring-offset-2 ring-offset-gray-800 transition-all ${color === themeOption.value ? 'ring-white' : 'ring-transparent hover:ring-gray-500'}`}
+                          style={{ backgroundColor: themeOption.hex }}
+                          title={themeOption.name}
+                      />
+                  ))}
+                   <button 
+                        onClick={() => setColor(undefined)}
+                        className={`h-8 px-3 rounded-md focus:outline-none ring-2 ring-offset-2 ring-offset-gray-800 transition-all text-xs flex items-center gap-1 ${!color ? 'ring-white' : 'ring-transparent hover:ring-gray-500'} bg-gray-600`}
+                    >
+                      Default
+                    </button>
+              </div>
+            </div>
+          </div>
           <div>
-            <label htmlFor="model-select" className="block text-sm font-medium text-gray-300 mb-1">
-              Active AI Model
-            </label>
-            <select
-              id="model-select"
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              className={`w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 ${theme.ring.primary}`}
-            >
-              <option value="gemini">Gemini</option>
-              <option value="openai">OpenAI</option>
-              <option value="claude">Claude</option>
-            </select>
+            <h3 className="text-lg font-semibold text-gray-200 border-b border-gray-700 pb-2">AI Configuration</h3>
+             <div className="mt-4">
+              <label htmlFor="model-select" className="block text-sm font-medium text-gray-300 mb-1">
+                Active AI Model
+              </label>
+              <select
+                id="model-select"
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                className={`w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 ${theme.ring.primary}`}
+              >
+                <option value="gemini">Gemini</option>
+                <option value="openai">OpenAI</option>
+                <option value="claude">Claude</option>
+              </select>
+            </div>
           </div>
 
           <div className="space-y-4">

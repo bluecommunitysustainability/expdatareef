@@ -61,7 +61,8 @@ export const StakeholderDashboard: React.FC<StakeholderDashboardProps> = ({
 
   const { completed, total } = useMemo(() => {
     const totalMetrics = questions.length;
-    const completedMetrics = Object.values(answers).filter(a => a.value !== null && a.value !== '' && a.value !== undefined).length;
+    // FIX: Explicitly type `a` as AnswerObject to resolve type inference issue with Object.values.
+    const completedMetrics = Object.values(answers).filter((a: AnswerObject) => a.value !== null && a.value !== '' && a.value !== undefined).length;
     return { completed: completedMetrics, total: totalMetrics };
   }, [questions, answers]);
 

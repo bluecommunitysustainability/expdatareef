@@ -19,6 +19,8 @@ import { UserProfilePanel } from './components/UserProfilePanel';
 import { StakeholderDashboard } from './components/stakeholder/StakeholderDashboard';
 import { ExplanationPage } from './components/ExplanationPage';
 import { AdminDashboard } from './components/admin/AdminDashboard';
+// FIX: Renamed Goals component to GoalsView to avoid naming conflict with the Goals type.
+import { GoalsView } from './components/Goals';
 
 
 // Hooks, constants, utils, types
@@ -34,9 +36,9 @@ import { checkSheetForAnswers } from './utils/sheetLoader';
 import { loadAllCsvData } from './utils/csvLoader';
 import { loadMapData } from './utils/mapLoader';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
-import type { Answers, AiContact, InfoModalData, Metric, BcStrategy, ApiKeys, SdgDetailInfo, Poi, GstcCriterionDetail, AnswerObject, SectionTimestamps, UserProfile } from './types';
+import type { Answers, AiContact, InfoModalData, Metric, BcStrategy, ApiKeys, SdgDetailInfo, Poi, GstcCriterionDetail, AnswerObject, SectionTimestamps, UserProfile, Goals, GoalObject } from './types';
 
-type AppView = 'form' | 'dashboard' | 'map' | 'stakeholder';
+type AppView = 'form' | 'goals' | 'dashboard' | 'map' | 'stakeholder';
 
 const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & { 
   destination: string,
@@ -49,9 +51,11 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
   answers,
   aiContacts,
   sectionTimestamps,
+  goals,
   setAnswers,
   setAiContacts,
   setSectionTimestamps,
+  setGoals,
   handleChangeDestination,
   apiKeys,
   setApiKeys,
@@ -60,6 +64,7 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
   handleLogout,
   handleUpdateProfile,
   handleSaveSettings,
+  handleBulkMergeAnswers,
   isAdmin,
   startInStakeholderView,
   onInitialViewRendered,
@@ -225,26 +230,11 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
     }
     setAnswers(prev => ({ ...prev, [questionId]: answer }));
   };
-  
-  const handleBulkMergeAnswers = (newAnswers: Answers) => {
-    const updatedSections = new Set<string>();
-    Object.keys(newAnswers).forEach(questionId => {
-        const question = questions.find(q => q.id === questionId);
-        if (question) {
-            updatedSections.add(question.section);
-        }
-    });
 
-    const now = new Date().toISOString();
-    const newTimestamps = Array.from(updatedSections).reduce((acc, section) => {
-        acc[section] = now;
-        return acc;
-    }, {} as Record<string, string>);
-    
-    setSectionTimestamps(prev => ({...prev, ...newTimestamps}));
-    setAnswers(prev => ({...prev, ...newAnswers}));
+  const handleGoalUpdate = (questionId: string, goal: GoalObject) => {
+    setGoals(prev => ({ ...prev, [questionId]: goal }));
   };
-
+  
   
   const handleSidebarQuestionSelect = (questionId: string) => {
     const question = questions.find(q => q.id === questionId);
@@ -294,7 +284,11 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
         <header className="bg-gray-800/80 backdrop-blur-sm sticky top-0 z-20 flex items-center justify-between p-4 border-b border-gray-700/50 flex-wrap gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-4">
-              <img src="https://labs.landsurveyorsunited.com/datareef/icons/web/android-chrome-192x192.png" alt="DataReef Logo" className="h-8 w-auto" />
+               {userProfile?.customLogo ? (
+                    <img src={userProfile.customLogo} alt="Custom Logo" className="h-8 w-auto max-w-[150px] object-contain" />
+                ) : (
+                    <img src="https://labs.landsurveyorsunited.com/datareef/icons/web/android-chrome-192x192.png" alt="DataReef Logo" className="h-8 w-auto" />
+                )}
               <h1 className="text-xl font-bold text-white truncate">{destination}</h1>
               <button onClick={handleChangeDestination} className={`px-3 py-1 text-xs font-semibold text-white bg-gray-600 hover:bg-gray-700 rounded-md flex-shrink-0`}>
                   Change Destination
@@ -309,6 +303,7 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
           <div className="flex items-center gap-2 flex-wrap justify-end">
             <div className="flex items-center bg-gray-700 rounded-lg p-1">
               <button onClick={() => handleViewChange('form')} className={`px-3 py-1 text-sm rounded-md transition-colors ${view === 'form' ? `${theme.background.secondary} text-white` : 'text-gray-300'}`}>Form</button>
+              <button onClick={() => handleViewChange('goals')} className={`px-3 py-1 text-sm rounded-md transition-colors ${view === 'goals' ? `${theme.background.secondary} text-white` : 'text-gray-300'}`}>Goals</button>
               <button onClick={() => handleViewChange('dashboard')} className={`px-3 py-1 text-sm rounded-md transition-colors ${view === 'dashboard' ? `${theme.background.secondary} text-white` : 'text-gray-300'}`}>Dashboard</button>
               <button onClick={() => handleViewChange('map')} className={`px-3 py-1 text-sm rounded-md transition-colors ${view === 'map' ? `${theme.background.secondary} text-white` : 'text-gray-300'}`}>Map</button>
             </div>
@@ -323,7 +318,7 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
                   title="Admin Dashboard"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-1.57 1.996A1.532 1.532 0 013.17 7.49c-1.56.38-1.56 2.6 0 2.98a1.532 1.532 0 01.948 2.286c-.836 1.372.734 2.942 1.996 1.57a1.532 1.532 0 012.286.948c.38 1.56 2.6 1.56 2.98 0a1.532 1.532 0 012.286-.948c1.372.836 2.942-.734 1.57-1.996A1.532 1.532 0 0116.83 12.51c1.56-.38 1.56-2.6 0-2.98a1.532 1.532 0 01-.948-2.286c.836-1.372-.734-2.942-1.996-1.57a1.532 1.532 0 01-2.286-.948zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                        <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-1.57 1.996A1.532 1.532 0 013.17 7.49c-1.56.38-1.56 2.6 0 2.98a1.532 1.532 0 01.948 2.286c-.836 1.372.734 2.942 1.996 1.57a1.532 1.532 0 012.286.948c.38 1.56 2.6 1.56 2.98 0a1.532 1.532 0 012.286-.948c1.372.836 2.942-.734-1.57-1.996A1.532 1.532 0 0116.83 12.51c1.56-.38 1.56-2.6 0-2.98a1.532 1.532 0 01-.948-2.286c.836-1.372-.734-2.942-1.996-1.57a1.532 1.532 0 01-2.286-.948zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
                     </svg>
                 </button>
             )}
@@ -349,7 +344,17 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
               activeQuestion={activeQuestion}
               setActiveQuestion={setActiveQuestion}
               sectionTimestamps={sectionTimestamps}
-              isAdmin={isLoggedIn}
+              isAdmin={isAdmin}
+              onBulkMergeAnswers={handleBulkMergeAnswers}
+            />
+          ) : view === 'goals' ? (
+            <GoalsView 
+              questions={questions}
+              answers={answers}
+              goals={goals}
+              onGoalUpdate={handleGoalUpdate}
+              isLoggedIn={isLoggedIn}
+              destination={destination}
             />
           ) : view === 'dashboard' ? (
             <Dashboard 
@@ -384,6 +389,7 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
           onClose={() => setIsInfoSidebarOpen(false)}
           data={infoHubData}
           onItemClick={(item) => setInfoModalData(item)}
+          destination={destination}
         />
       )}
       <InfoModal
@@ -410,9 +416,11 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
        <SettingsPanel
         isOpen={isSettingsPanelOpen}
         onClose={() => setIsSettingsPanelOpen(false)}
-        onSave={(settings) => handleSaveSettings(settings.keys, settings.model)}
+        onSave={(settings) => handleSaveSettings(settings.keys, settings.model, settings.logo, settings.color)}
         currentKeys={apiKeys}
         currentModel={selectedApiModel}
+        currentLogo={userProfile?.customLogo}
+        currentColor={userProfile?.primaryColor}
       />
        {isLoggedIn && (
         <DataSyncPanel
@@ -442,23 +450,26 @@ interface AppProps {
   aiContacts: Record<string, AiContact[]>;
   apiKeys: ApiKeys;
   sectionTimestamps: SectionTimestamps;
+  goals: Goals;
   setAnswers: React.Dispatch<React.SetStateAction<Answers>>;
   setAiContacts: React.Dispatch<React.SetStateAction<Record<string, AiContact[]>>>;
   setApiKeys: React.Dispatch<React.SetStateAction<ApiKeys>>;
   setSectionTimestamps: React.Dispatch<React.SetStateAction<SectionTimestamps>>;
+  setGoals: React.Dispatch<React.SetStateAction<Goals>>;
   handleChangeDestination: () => void;
   userProfile: UserProfile | null;
   handleLogin: (email: string) => Promise<void>;
   handleLogout: () => void;
   handleUpdateProfile: (profile: UserProfile) => Promise<void>;
-  handleSaveSettings: (keys: ApiKeys, model: string) => Promise<void>;
+  handleSaveSettings: (keys: ApiKeys, model: string, logo?: string | null, color?: string) => Promise<void>;
+  handleBulkMergeAnswers: (newAnswers: Answers) => void;
   isAdmin: boolean;
   startInStakeholderView: boolean;
   onInitialViewRendered: () => void;
 }
 
 function App() {
-  const [selectedDestination, setSelectedDestination] = useLocalStorage<string>('selectedDestination', '');
+  const [selectedDestination, setSelectedDestination] = useState('');
   
   const [allDestinations, setAllDestinations] = useLocalStorage<Destination[]>('datareef-destinations', destinationObjects);
 
@@ -470,6 +481,10 @@ function App() {
   const timestampsKey = useMemo(() => `timestamps_${selectedDestination || 'none'}`, [selectedDestination]);
   const [sectionTimestamps, setSectionTimestamps] = useLocalStorage<SectionTimestamps>(timestampsKey, {});
 
+  const goalsKey = useMemo(() => `goals_${selectedDestination || 'none'}`, [selectedDestination]);
+  const [goals, setGoals] = useLocalStorage<Goals>(goalsKey, {});
+
+  // FIX: Corrected the dependency array for useMemo. The key should depend on the destination, not the contacts themselves.
   const aiContactsKey = useMemo(() => `aiContacts_${selectedDestination || 'none'}`, [selectedDestination]);
   const [aiContacts, setAiContacts] = useLocalStorage<Record<string, AiContact[]>>(aiContactsKey, {});
   
@@ -482,7 +497,7 @@ function App() {
 
   const [startInStakeholderView, setStartInStakeholderView] = useState(false);
   const [landingView, setLandingView] = useState<'selector' | 'explanation'>('selector');
-  const lastDestinationFromStorage = JSON.parse(localStorage.getItem('selectedDestination') || '""');
+  const lastDestinationFromStorage = JSON.parse(localStorage.getItem('lastSelectedDestination') || '""');
 
 
   // Session restoration effect
@@ -551,10 +566,15 @@ function App() {
       alert('Profile updated!');
   };
 
-  const handleSaveSettings = async (keys: ApiKeys, model: string) => {
+  const handleSaveSettings = async (keys: ApiKeys, model: string, logo?: string | null, color?: string) => {
       setApiKeys(keys);
       if (userProfile) {
-          const updatedProfile = { ...userProfile, apiKeys: keys };
+          const updatedProfile = { 
+              ...userProfile, 
+              apiKeys: keys, 
+              customLogo: logo === null ? undefined : logo || userProfile.customLogo,
+              primaryColor: color || userProfile.primaryColor
+          };
           await saveUserProfile(updatedProfile);
           setUserProfile(updatedProfile);
       }
@@ -562,6 +582,9 @@ function App() {
   };
 
   const handleDestinationSelect = (destination: string) => {
+    if (destination) {
+        localStorage.setItem('lastSelectedDestination', JSON.stringify(destination));
+    }
     if (destination !== selectedDestination) {
       setSelectedDestination(destination);
     }
@@ -571,6 +594,25 @@ function App() {
     setStartInStakeholderView(false);
     setSelectedDestination('');
   }
+  
+  const handleBulkMergeAnswers = (newAnswers: Answers) => {
+    const updatedSections = new Set<string>();
+    Object.keys(newAnswers).forEach(questionId => {
+        const question = questions.find(q => q.id === questionId);
+        if (question) {
+            updatedSections.add(question.section);
+        }
+    });
+
+    const now = new Date().toISOString();
+    const newTimestamps = Array.from(updatedSections).reduce((acc, section) => {
+        acc[section] = now;
+        return acc;
+    }, {} as Record<string, string>);
+    
+    setSectionTimestamps(prev => ({...prev, ...newTimestamps}));
+    setAnswers(prev => ({...prev, ...newAnswers}));
+  };
 
   if (!selectedDestination) {
     return (
@@ -612,7 +654,7 @@ function App() {
 
         {landingView === 'selector' ? (
             <div className="relative z-10 w-full max-w-lg bg-gray-800/80 backdrop-blur-sm p-8 rounded-lg shadow-2xl text-center">
-              <img src="https://labs.landsurveyorsunited.com/datareef/icons/web/android-chrome-192x192.png" alt="DataReef Logo" className="mx-auto h-16 w-auto mb-4" />
+              <img src="https://labs.landsurveyorsunited.com/datareef/icons/web/android-chrome-192x192.png" alt="DataReef Logo" className="mx-auto h-64 w-auto mb-4" />
               <h1 className="text-3xl font-bold text-teal-400 mb-2">DataReef Observatory</h1>
               <p className="text-gray-400 mb-6">Because without the data there will soon be no reef.</p>
               <DestinationSelector 
@@ -649,23 +691,26 @@ function App() {
   }
 
   return (
-    <ThemeProvider destination={selectedDestination}>
+    <ThemeProvider destination={selectedDestination} primaryColor={userProfile?.primaryColor}>
       <MainLayout 
         destination={selectedDestination}
         answers={answers}
         aiContacts={aiContacts}
         apiKeys={apiKeys}
         sectionTimestamps={sectionTimestamps}
+        goals={goals}
         setAnswers={setAnswers}
         setAiContacts={setAiContacts}
         setApiKeys={setApiKeys}
         setSectionTimestamps={setSectionTimestamps}
+        setGoals={setGoals}
         handleChangeDestination={handleChangeDestination}
         userProfile={userProfile}
         handleLogin={handleLogin}
         handleLogout={handleLogout}
         handleUpdateProfile={handleUpdateProfile}
         handleSaveSettings={handleSaveSettings}
+        handleBulkMergeAnswers={handleBulkMergeAnswers}
         isAdmin={isAdmin}
         startInStakeholderView={startInStakeholderView}
         onInitialViewRendered={() => setStartInStakeholderView(false)}

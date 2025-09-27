@@ -11,13 +11,14 @@ export const useTheme = () => useContext(ThemeContext);
 interface ThemeProviderProps {
   children: React.ReactNode;
   destination: string;
+  primaryColor?: string;
 }
 
-export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children, destination }) => {
+export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children, destination, primaryColor }) => {
   const theme = useMemo(() => {
-    const colorName = (destinationThemes[destination] || destinationThemes['default']).name;
+    const colorName = primaryColor || (destinationThemes[destination] || destinationThemes['default']).name;
     return generateTheme(colorName);
-  }, [destination]);
+  }, [destination, primaryColor]);
 
   return (
     <ThemeContext.Provider value={theme}>

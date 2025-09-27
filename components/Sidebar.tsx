@@ -95,7 +95,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const userAvatar = userProfile?.avatar || (userProfile ? `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile.name)}&background=4b5563&color=e2e8f0&size=96` : undefined);
   
-  const bgImage = view === 'stakeholder' ? stakeholderBackgroundImages[destination] || stakeholderBackgroundImages['default'] : undefined;
+  const bgImage = stakeholderBackgroundImages[destination] || stakeholderBackgroundImages['default'];
 
   return (
     <>
@@ -118,9 +118,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       <aside 
         className={`fixed top-0 left-0 h-full border-r border-gray-700/50 flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out z-40 ${isCollapsed ? 'w-20' : 'w-80 lg:w-96'} ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
-        style={bgImage ? { backgroundImage: `url(${bgImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
+        style={{ backgroundImage: `url(${bgImage})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
       >
-        <div className={cn("absolute inset-0 z-0", bgImage ? 'bg-gray-900/70 backdrop-blur-sm' : 'bg-gray-800')} />
+        <div className={cn("absolute inset-0 z-0", 'bg-gray-900/70 backdrop-blur-sm')} />
 
         <div className="relative z-10 flex flex-col h-full">
             {isCollapsed && <SidebarBranding />}

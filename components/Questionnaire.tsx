@@ -20,6 +20,7 @@ interface QuestionnaireProps {
   setActiveQuestion: (questionId: string | null) => void;
   sectionTimestamps: SectionTimestamps;
   isAdmin: boolean;
+  onBulkMergeAnswers: (newAnswers: Answers) => void;
 }
 
 const getSectionCompletion = (questions: Question[], answers: Answers) => {
@@ -46,7 +47,8 @@ export const Questionnaire: React.FC<QuestionnaireProps> = ({
     activeQuestion,
     setActiveQuestion,
     sectionTimestamps,
-    isAdmin
+    isAdmin,
+    onBulkMergeAnswers
 }) => {
   const [loadingAiContactsSection, setLoadingAiContactsSection] = React.useState<string | null>(null);
 
@@ -123,7 +125,7 @@ export const Questionnaire: React.FC<QuestionnaireProps> = ({
     try {
         const fullContext = generateFullAnswerContext(questions, answers, destination);
 
-        const prompt = `Based on the comprehensive sustainability assessment data provided below for the destination "${destination}", suggest 1-3 local or regional organizations, experts, or government bodies that could be valuable contacts for improving sustainability, specifically related to the "${section}" section. When available, prioritize contacts related to the official data sources listed in the context. Provide their name, a brief description of why they are relevant, and a website if available.
+        const prompt = `Based on the comprehensive sustainability assessment data provided below for the tourist destination of "${destination}", suggest 1-3 local or regional organizations, experts, or government bodies that could be valuable contacts for improving sustainability, specifically related to the "${section}" section. When available, prioritize contacts related to the official data sources listed in the context. Provide their name, a brief description of why they are relevant, and a website if available.
 
         Comprehensive Context for ${destination}:
         ${fullContext}
@@ -171,7 +173,9 @@ export const Questionnaire: React.FC<QuestionnaireProps> = ({
 
   return (
     <div className="space-y-3" onKeyDown={handleKeyDown}>
-      {Object.entries(questionsBySection).map(([section, sectionQuestions]) => {
+      {/* FIX: Replaced Object.entries with Object.keys to fix TypeScript inference issues where sectionQuestions was typed as `unknown`. */}
+      {Object.keys(questionsBySection).map((section) => {
+          const sectionQuestions = questionsBySection[section];
           const completion = getSectionCompletion(sectionQuestions, answers);
           const lastEdited = sectionTimestamps[section];
           return (
@@ -186,6 +190,13 @@ export const Questionnaire: React.FC<QuestionnaireProps> = ({
                 onAiSuggestContacts={() => handleAiSuggestContacts(section)}
                 lastEdited={lastEdited}
                 isAdmin={isAdmin}
+                destination={destination}
+                questions={questions}
+                answers={answers}
+                setActiveQuestion={setActiveQuestion}
+                setOpenSection={setOpenSection}
+                sectionQuestions={sectionQuestions}
+                onBulkMergeAnswers={onBulkMergeAnswers}
             >
                 <div className="space-y-6 pt-4">
                     {sectionQuestions.map(question => (

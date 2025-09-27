@@ -52,7 +52,6 @@ export const WordCloud: React.FC<WordCloudProps> = ({ answers, questions }) => {
       .slice(0, 30) // Get top 30 words
       .map(([text, value]) => ({ text, value }));
       
-    // FIX: Return a generic empty array to fix type inference issue with different return types.
     if (sortedWords.length === 0) return [];
 
     // Normalize font sizes for better visualization

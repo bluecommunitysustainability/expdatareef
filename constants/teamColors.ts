@@ -32,6 +32,19 @@ export const destinationThemes: Record<string, { name: string, hex: string }> = 
   'default': { name: 'teal', hex: '#14b8a6' }
 };
 
+export const availableThemes: { name: string; value: string; hex: string }[] = [
+    { name: 'Teal', value: 'teal', hex: '#14b8a6' },
+    { name: 'Blue', value: 'blue', hex: '#3b82f6' },
+    { name: 'Red', value: 'red', hex: '#ef4444' },
+    { name: 'Orange', value: 'orange', hex: '#f97316' },
+    { name: 'Amber', value: 'amber', hex: '#f59e0b' },
+    { name: 'Yellow', value: 'yellow', hex: '#eab308' },
+    { name: 'Green', value: 'green', hex: '#22c55e' },
+    { name: 'Indigo', value: 'indigo', hex: '#6366f1' },
+    { name: 'Purple', value: 'purple', hex: '#8b5cf6' },
+    { name: 'Pink', value: 'pink', hex: '#ec4899' },
+];
+
 
 export const generateTheme = (color: string): Theme => {
   return {

@@ -45,8 +45,10 @@ export const FormSidebarContent: React.FC<FormSidebarContentProps> = ({
          <ProgressBar completed={completedQuestions} total={totalQuestions} />
       </div>
 
-      {Object.entries(questionsBySection).map(([section, questions]) => {
-          const { completed, total } = getSectionCompletion(questions, answers);
+      {/* FIX: Replaced Object.entries with Object.keys to fix TypeScript inference issue where sectionQuestions was typed as `unknown`. */}
+      {Object.keys(questionsBySection).map((section) => {
+          const sectionQuestions = questionsBySection[section];
+          const { completed, total } = getSectionCompletion(sectionQuestions, answers);
           const isComplete = completed === total;
 
           const title = (
@@ -61,7 +63,7 @@ export const FormSidebarContent: React.FC<FormSidebarContentProps> = ({
         return (
           <Accordion key={section} title={title}>
             <ul className="space-y-1">
-              {questions.map(q => {
+              {sectionQuestions.map(q => {
                   const answer = answers[q.id];
                   const isAnswered = answer && answer.value !== null && answer.value !== undefined && answer.value !== '';
                   

@@ -127,7 +127,17 @@ export interface UserProfile {
   role?: 'admin' | 'user';
   team?: string;
   allowedDestinations?: string[];
+  customLogo?: string; // base64 data url for logo
+  primaryColor?: string; // e.g., 'teal', 'blue'
 }
+
+// Goals
+export interface GoalObject {
+    value: number | null;
+    targetDate?: string;
+    comments?: string;
+}
+export type Goals = Record<string, GoalObject>;
 
 
 // Map-related types

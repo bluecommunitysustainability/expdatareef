@@ -11,6 +11,7 @@ import { AiMarkdown } from './AiMarkdown';
 import { WasteChart } from './dashboard/WasteChart';
 import { EnergyChart } from './dashboard/EnergyChart';
 import { WordCloud } from './dashboard/WordCloud';
+import { generateFullAnswerContext } from '../utils/aiHelper';
 
 interface DashboardProps {
   answers: Answers;
@@ -52,23 +53,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ answers, destination, ques
     try {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         
-        const context = answeredQuestions.map(q => {
-            const answerObj = answers[q.id];
-            let answerText = answerObj?.value;
+        const fullContext = generateFullAnswerContext(questions, answers, destination);
 
-            if (answerText instanceof File) {
-                answerText = answerText.name;
-            } else if (typeof answerText === 'boolean') {
-                answerText = answerText ? 'Yes' : 'No';
-            }
-            return `Q: ${q.text.replace('{Destination}', destination)}\nA: ${answerText}`;
-        }).join('\n\n');
+        const prompt = `You are a world-class sustainability analyst providing a detailed report for the tourist destination of "${destination}". 
+Based on the comprehensive assessment data provided below, generate a professional sustainability report.
 
-        const prompt = `You are a sustainability analyst providing a report for a tourist destination. Based on the following questionnaire data for "${destination}", generate a concise sustainability summary. The summary should be easy to read and well-structured, highlighting both key strengths and potential areas for improvement. Use markdown for formatting, including headings (e.g., "## Strengths") and bullet points.
+**Instructions:**
+1.  Begin with a concise **Executive Summary** (2-3 sentences).
+2.  Create a section titled **Key Strengths**, highlighting areas where the destination is performing well. Use bullet points.
+3.  Create a section titled **Areas for Improvement**, identifying key weaknesses or gaps in their sustainability efforts. Use bullet points.
+4.  Create a section titled **Actionable Recommendations**, providing specific, concrete suggestions for improvement based on the identified weaknesses. Frame these as actionable steps.
+5.  Your entire response must be in Markdown format. Use '##' for section titles.
 
-        Data:
-        ${context}
-        `;
+**Assessment Data:**
+${fullContext}
+`;
 
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
@@ -161,18 +160,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ answers, destination, ques
         </div>
       </section>
 
-      {Object.entries(questionsBySection).map(([section, sectionQuestions]) => {
-          const sectionId = `dashboard-section-${section.replace(/\s+/g, '-')}`;
-          return (
-            <section key={section} id={sectionId} className="scroll-mt-24">
-              <div className={`border-b ${theme.border.primary} pb-4 mb-6`}>
-                <h2 className={`text-2xl font-bold ${theme.text.primary}`}>{section}</h2>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {sectionQuestions.map(renderWidget)}
-              </div>
-            </section>
-          )
+      {Object.keys(questionsBySection).map(section => {
+        const sectionId = `dashboard-section-${section.replace(/\s+/g, '-')}`;
+        return (
+          <section key={section} id={sectionId} className="scroll-mt-24">
+            <div className={`border-b ${theme.border.primary} pb-4 mb-6`}>
+              <h2 className={`text-2xl font-bold ${theme.text.primary}`}>{section}</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {questionsBySection[section].map(renderWidget)}
+            </div>
+          </section>
+        );
       })}
       <Modal isOpen={!!modalContent} onClose={() => setModalContent(null)} title={modalContent?.title || ''}>
         <p className="text-gray-300 whitespace-pre-wrap">{modalContent?.content}</p>
