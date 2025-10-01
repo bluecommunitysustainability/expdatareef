@@ -11,6 +11,7 @@ interface GoalsViewProps {
   onGoalUpdate: (questionId: string, goal: GoalObject) => void;
   isLoggedIn: boolean;
   destination: string;
+  isAdmin: boolean;
 }
 
 export const GoalsView: React.FC<GoalsViewProps> = ({
@@ -20,6 +21,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
   onGoalUpdate,
   isLoggedIn,
   destination,
+  isAdmin,
 }) => {
   const theme = useTheme();
   
@@ -70,6 +72,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
                   currentGoal={goals[question.id] ?? null}
                   onGoalUpdate={onGoalUpdate}
                   isLoggedIn={isLoggedIn}
+                  isAdmin={isAdmin}
                   questions={questions}
                   answers={answers}
                   destination={destination}

@@ -98,6 +98,15 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
   
   const theme = useTheme();
   const debounceTimeoutRef = useRef<number | null>(null);
+  
+  useEffect(() => {
+    // Automatically collapse the sidebar after a delay to give users a chance to see it.
+    const timer = setTimeout(() => {
+        setIsSidebarCollapsed(true);
+    }, 8000); // 8 seconds
+
+    return () => clearTimeout(timer); // Cleanup on unmount
+  }, []); // Run only once on mount
 
   const isLoggedIn = !!userProfile;
 
@@ -281,7 +290,7 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
       />
       <div className={`min-w-0 transition-all duration-300 ease-in-out min-h-screen ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-96'}`}>
        {view !== 'stakeholder' && (
-        <header className="bg-gray-800/80 backdrop-blur-sm sticky top-0 z-20 flex items-center justify-between p-4 border-b border-gray-700/50 flex-wrap gap-4">
+        <header className="bg-gray-800/80 backdrop-blur-sm sticky top-0 z-20 flex items-center justify-between p-4 border-b border-gray-600 flex-wrap gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-4">
                {userProfile?.customLogo ? (
@@ -355,6 +364,7 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
               onGoalUpdate={handleGoalUpdate}
               isLoggedIn={isLoggedIn}
               destination={destination}
+              isAdmin={isAdmin}
             />
           ) : view === 'dashboard' ? (
             <Dashboard 

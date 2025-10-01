@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { QuestionType, type Answers } from '../types';
 import type { Question, AnswerObject, AnswerValue } from '../types';
 import { FileUploader } from './FileUploader';
@@ -50,10 +50,17 @@ const getSourceText = (url: string): string => {
 };
 
 export const QuestionCard: React.FC<QuestionCardProps> = ({ question, currentAnswer, onAnswerChange, destination, isAdmin, questions, answers }) => {
-  const [researchStatus, setResearchStatus] = useState<'idle' | 'researching' | 'error'>('idle');
+  const [researchStatus, setResearchStatus] = useState<'idle' | 'researching' | 'success' | 'error'>('idle');
   const [isHumanModalOpen, setIsHumanModalOpen] = useState(false);
   const questionText = question.text.replace(/{Destination}/g, destination);
   const theme = useTheme();
+
+  useEffect(() => {
+    if (researchStatus === 'success' || researchStatus === 'error') {
+      const timer = setTimeout(() => setResearchStatus('idle'), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [researchStatus]);
 
   const handleValueChange = (value: AnswerValue) => {
     onAnswerChange({
@@ -139,7 +146,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question, currentAns
 
               if (isValid && value !== null) {
                   onAnswerChange({ value, source: result.source, aiGenerated: true });
-                  setResearchStatus('idle');
+                  setResearchStatus('success');
               } else {
                   throw new Error(`AI returned an invalid answer format for type ${question.type}: ${result.answer}`);
               }
@@ -151,7 +158,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question, currentAns
           console.error("Error during AI research:", error);
           alert("An error occurred during AI research. Please check the console for details.");
           setResearchStatus('error');
-          setTimeout(() => setResearchStatus('idle'), 3000);
       }
   };
 
@@ -192,9 +198,21 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question, currentAns
                   </svg>
                   Researching...
               </>;
+          case 'success':
+            return <>✓ Success</>;
           case 'error': return '✗ Error';
           default: return '✨ AI Research';
       }
+  };
+
+  const getButtonClass = () => {
+    const base = `px-3 py-1 text-xs rounded-md disabled:cursor-not-allowed flex items-center flex-shrink-0 transition-colors`;
+    switch(researchStatus) {
+        case 'error': return `${base} bg-red-600 text-white`;
+        case 'success': return `${base} bg-green-600 text-white`;
+        case 'researching': return `${base} bg-gray-800 text-gray-300`;
+        default: return `${base} bg-gray-700 hover:bg-gray-600`;
+    }
   };
 
   return (
@@ -215,9 +233,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question, currentAns
             <button
               onClick={handleAiResearch}
               disabled={researchStatus === 'researching'}
-              className={`px-3 py-1 text-xs rounded-md disabled:cursor-not-allowed flex items-center flex-shrink-0 transition-colors ${
-                  researchStatus === 'error' ? 'bg-red-600 text-white' : `bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800`
-              }`}
+              className={getButtonClass()}
               title="Use AI to find an answer for this question"
             >
              {researchButtonContent()}

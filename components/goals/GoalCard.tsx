@@ -12,6 +12,7 @@ interface GoalCardProps {
   currentGoal: GoalObject | null;
   onGoalUpdate: (questionId: string, goal: GoalObject) => void;
   isLoggedIn: boolean;
+  isAdmin: boolean;
   // Props needed for AI context
   questions: Question[];
   answers: Answers;
@@ -24,6 +25,7 @@ export const GoalCard: React.FC<GoalCardProps> = ({
   currentGoal,
   onGoalUpdate,
   isLoggedIn,
+  isAdmin,
   questions,
   answers,
   destination,
@@ -115,9 +117,8 @@ export const GoalCard: React.FC<GoalCardProps> = ({
         if (result.suggestedGoal && result.rationale) {
             alert(`AI Suggestion: ${result.rationale}`);
             onGoalUpdate(question.id, {
-                ...currentGoal,
                 value: result.suggestedGoal,
-                comments: currentGoal?.comments,
+                comments: currentGoal?.comments ?? `AI Rationale: ${result.rationale}`,
                 targetDate: currentGoal?.targetDate
             });
         }
@@ -144,16 +145,18 @@ export const GoalCard: React.FC<GoalCardProps> = ({
           <div className="flex-1">
              <div className="flex justify-between items-center">
                 <label htmlFor={`goal-${question.id}`} className="text-xs text-gray-500 uppercase tracking-wider">Goal</label>
-                <button 
-                    onClick={handleAiAssist}
-                    disabled={!isLoggedIn || isAssisting}
-                    className="px-2 py-0.5 text-xs rounded-md disabled:cursor-not-allowed flex items-center transition-colors bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800"
-                    title="Get an AI-powered goal suggestion"
-                >
-                    {isAssisting ? (
-                        <svg className="animate-spin h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                    ) : '✨ Assist'}
-                </button>
+                {isAdmin && (
+                    <button 
+                        onClick={handleAiAssist}
+                        disabled={isAssisting}
+                        className="px-2 py-0.5 text-xs rounded-md disabled:cursor-not-allowed flex items-center transition-colors bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800"
+                        title="Get an AI-powered goal suggestion"
+                    >
+                        {isAssisting ? (
+                            <svg className="animate-spin h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        ) : '✨ Assist'}
+                    </button>
+                )}
             </div>
             <input
               id={`goal-${question.id}`}

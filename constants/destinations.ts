@@ -16,6 +16,7 @@ export const destinationObjects: Destination[] = [
   { id: 6, name: "Key West", latitude: 24.5551, longitude: -81.7800, zoom: 12 },
   { id: 7, name: "Treasure Island", latitude: 27.7659, longitude: -82.7668, zoom: 13 },
   { id: 8, name: "Hawaii", latitude: 21.3069, longitude: -157.8583, zoom: 7 },
+  { id: 9, name: "St. John, USVI", latitude: 18.3325, longitude: -64.7931, zoom: 12 },
 ];
 
 export const destinations: string[] = destinationObjects.map(d => d.name);

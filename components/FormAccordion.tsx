@@ -67,10 +67,10 @@ export const FormAccordion: React.FC<FormAccordionProps> = ({
   const [isSuggestingQs, setIsSuggestingQs] = useState(false);
   const [isResearching, setIsResearching] = useState(false);
 
-  const unansweredQuestions = useMemo(() => {
+  const unansweredQuantifiableAndBooleanQuestions = useMemo(() => {
     return sectionQuestions.filter(q => {
-        // AI research is not applicable for file uploads
-        if (q.type === QuestionType.FILE) {
+        // Only target quantifiable (number) and boolean questions for bulk AI research.
+        if (q.type !== QuestionType.NUMBER && q.type !== QuestionType.BOOLEAN) {
             return false;
         }
         const answer = answers[q.id];
@@ -139,14 +139,14 @@ Return ONLY a JSON object with a single key "suggested_ids" containing an array 
   };
   
   const handleAiResearchSection = async () => {
-    if (unansweredQuestions.length === 0) {
-        alert("All applicable questions in this section are already answered.");
+    if (unansweredQuantifiableAndBooleanQuestions.length === 0) {
+        alert("All applicable quantifiable and boolean questions in this section are already answered.");
         return;
     }
     setIsResearching(true);
     try {
         const fullContext = generateFullAnswerContext(questions, answers, destination);
-        const questionsToResearch = unansweredQuestions.map(q => ({
+        const questionsToResearch = unansweredQuantifiableAndBooleanQuestions.map(q => ({
             id: q.id,
             text: q.text.replace('{Destination}', destination),
             type: q.type
@@ -215,7 +215,7 @@ Your response MUST be ONLY a single, valid JSON object with a single key "result
             result.results.forEach(item => {
                 if (!item.found || !item.answer || !item.source) return;
 
-                const question = unansweredQuestions.find(q => q.id === item.questionId);
+                const question = unansweredQuantifiableAndBooleanQuestions.find(q => q.id === item.questionId);
                 if (!question) return;
 
                 let value: AnswerValue = null;
@@ -248,7 +248,7 @@ Your response MUST be ONLY a single, valid JSON object with a single key "result
             onBulkMergeAnswers(newAnswers);
         }
 
-        alert(`AI research complete. Found ${foundCount} out of ${unansweredQuestions.length} possible answers.`);
+        alert(`AI research complete. Found ${foundCount} out of ${unansweredQuantifiableAndBooleanQuestions.length} possible answers.`);
 
     } catch (e) {
         console.error("Error during AI section research:", e);
@@ -287,21 +287,22 @@ Your response MUST be ONLY a single, valid JSON object with a single key "result
         <div className="px-4 pb-4">
             {isAdmin && (
               <div className={`border-t ${theme.border.primary} pt-4 mb-4 flex justify-end items-center flex-wrap gap-3`}>
-                  {unansweredQuestions.length > 0 && (
-                      <button
-                          onClick={handleAiResearchSection}
-                          disabled={isResearching}
-                          className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 rounded-md disabled:bg-blue-800 disabled:cursor-not-allowed transition-colors flex items-center"
-                          title={`Research all ${unansweredQuestions.length} unanswered questions in this section.`}
-                      >
-                          {isResearching ? (
-                              <>
-                                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                                  Researching...
-                              </>
-                          ) : '✨ AI Research Section'}
-                      </button>
-                  )}
+                  <button
+                      onClick={handleAiResearchSection}
+                      disabled={isResearching || unansweredQuantifiableAndBooleanQuestions.length === 0}
+                      className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 rounded-md disabled:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+                      title={unansweredQuantifiableAndBooleanQuestions.length > 0
+                          ? `Use AI to research ${unansweredQuantifiableAndBooleanQuestions.length} remaining questions.`
+                          : "All applicable questions in this section are answered."
+                      }
+                  >
+                      {isResearching ? (
+                          <>
+                              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                              Researching...
+                          </>
+                      ) : '✨ AI Answer Questions'}
+                  </button>
                   <button
                       onClick={handleAiSuggestQuestions}
                       disabled={isSuggestingQs}

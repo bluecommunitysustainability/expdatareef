@@ -12,6 +12,7 @@ import { WasteChart } from './dashboard/WasteChart';
 import { EnergyChart } from './dashboard/EnergyChart';
 import { WordCloud } from './dashboard/WordCloud';
 import { generateFullAnswerContext } from '../utils/aiHelper';
+import { AiSectionSummary } from './stakeholder/AiSectionSummary';
 
 interface DashboardProps {
   answers: Answers;
@@ -162,13 +163,27 @@ ${fullContext}
 
       {Object.keys(questionsBySection).map(section => {
         const sectionId = `dashboard-section-${section.replace(/\s+/g, '-')}`;
+        const sectionQuestions = questionsBySection[section];
+        const sectionAnswers = sectionQuestions.reduce((acc, q) => {
+            if (answers[q.id]) {
+                acc[q.id] = answers[q.id];
+            }
+            return acc;
+        }, {} as Answers);
+
         return (
           <section key={section} id={sectionId} className="scroll-mt-24">
             <div className={`border-b ${theme.border.primary} pb-4 mb-6`}>
               <h2 className={`text-2xl font-bold ${theme.text.primary}`}>{section}</h2>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {questionsBySection[section].map(renderWidget)}
+             <AiSectionSummary
+                sectionName={section}
+                sectionQuestions={sectionQuestions}
+                sectionAnswers={sectionAnswers}
+                destination={destination}
+              />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+              {sectionQuestions.map(renderWidget)}
             </div>
           </section>
         );

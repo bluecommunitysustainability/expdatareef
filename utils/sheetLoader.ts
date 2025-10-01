@@ -3,6 +3,7 @@ import type { Answers, Question } from '../types';
 import { QuestionType } from '../types';
 import { autofillData } from '../data/autofillData';
 import { getHawaiiAnswers } from '../data/hawaiiAutofillData';
+import { getStJohnAnswers } from '../data/stJohnAutofillData';
 
 /**
  * Parses the multi-line autofill data string into a structured map.
@@ -48,6 +49,9 @@ const getParsedData = (): Map<string, Map<string, string>> => {
 export const checkSheetForAnswers = async (destination: string): Promise<Answers> => {
     if (destination === 'Hawaii') {
         return getHawaiiAnswers();
+    }
+    if (destination === 'St. John, USVI') {
+        return getStJohnAnswers();
     }
 
     const allData = getParsedData();
