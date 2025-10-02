@@ -58,6 +58,7 @@ export interface Metric {
     name: string;
     iconUrl: string;
     relatedQuestions: string;
+    questionNumbers?: string;
 }
 
 // Represents a specific target for a Sustainable Development Goal

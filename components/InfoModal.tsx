@@ -13,9 +13,29 @@ const renderContent = (data: InfoModalData) => {
   switch (data.type) {
     case 'metric':
       const metric = data as Metric;
+      const questionsList = metric.relatedQuestions?.split('\n').filter(q => q.trim() !== '');
       return (
-        <div>
-          <p><strong className="font-semibold text-gray-300">Related Questions:</strong> {metric.relatedQuestions || 'N/A'}</p>
+        <div className="space-y-4">
+          <div>
+            <h4 className="font-semibold text-gray-300">Related Questions</h4>
+            {questionsList && questionsList.length > 0 ? (
+              <ul className="list-disc list-inside text-gray-400 mt-2 space-y-2">
+                {questionsList.map((question, index) => (
+                  <li key={index}>
+                    {question.replace(/^[-*]\s*/, '').trim()}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-gray-400 mt-1">N/A</p>
+            )}
+          </div>
+          {metric.questionNumbers && (
+             <div>
+                <h4 className="font-semibold text-gray-300">Question Numbers</h4>
+                <p className="text-gray-400 mt-1 font-mono">{metric.questionNumbers}</p>
+             </div>
+          )}
         </div>
       );
     // FIX: Removed 'sdg' case as it is not a valid type within InfoModalData and caused a type error.

@@ -19,19 +19,21 @@ interface StakeholderSidebarContentProps {
   mapboxToken: string;
 }
 
-type Tab = 'UNSDGs' | 'GSTC' | 'BC';
+type Tab = 'Metrics' | 'UNSDGs' | 'GSTC' | 'BC';
 
 export const StakeholderSidebarContent: React.FC<StakeholderSidebarContentProps> = ({ onBack, data, onItemClick, pois, tours, mapboxToken }) => {
-  const [activeTab, setActiveTab] = useState<Tab>('UNSDGs');
+  const [activeTab, setActiveTab] = useState<Tab>('Metrics');
   const theme = useTheme();
   
-  const tabs: Tab[] = ['UNSDGs', 'GSTC', 'BC'];
+  const tabs: Tab[] = ['Metrics', 'UNSDGs', 'GSTC', 'BC'];
 
   const renderContent = () => {
     if (!data) {
         return <div className="p-4 text-center text-gray-400">Loading data...</div>;
     }
     switch (activeTab) {
+      case 'Metrics':
+        return <MetricsTab data={data.metrics} onItemClick={onItemClick} />;
       case 'UNSDGs':
         return <SdgTab data={data.sdgs} />;
       case 'GSTC':
