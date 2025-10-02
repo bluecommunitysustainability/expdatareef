@@ -77,6 +77,38 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const userAvatar = userProfile?.avatar || (userProfile ? `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile.name)}&background=4b5563&color=e2e8f0&size=96` : undefined);
   
+  const exportButtonAndMenu = isLoggedIn && (
+    <div className="relative">
+      <button
+        ref={exportButtonRef}
+        onClick={() => setIsExportMenuOpen(p => !p)}
+        className="p-2 rounded-full hover:bg-gray-700/50"
+        title="Export Data"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+        </svg>
+      </button>
+      {isExportMenuOpen && (
+        <ExportMenu
+          onClose={() => setIsExportMenuOpen(false)}
+          onExportXLSX={() => {
+            exportToXLSX(questions, answers, destination);
+            setIsExportMenuOpen(false);
+          }}
+          onExportJSON={() => {
+            exportToJson(answers, destination);
+            setIsExportMenuOpen(false);
+          }}
+          onExportCSV={() => {
+            exportToCSV(questions, answers, destination);
+            setIsExportMenuOpen(false);
+          }}
+          parentRef={exportButtonRef}
+        />
+      )}
+    </div>
+  );
 
   return (
     <>
@@ -161,43 +193,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </div>
                 )}
                 </button>
-                {isLoggedIn && (
-                <>
-                    <div className="relative">
-                        <button
-                            ref={exportButtonRef}
-                            onClick={() => setIsExportMenuOpen(p => !p)}
-                            className="p-2 rounded-full hover:bg-gray-700/50"
-                            title="Export Data"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                            </svg>
-                        </button>
-                        {isExportMenuOpen && (
-                            <ExportMenu
-                                onClose={() => setIsExportMenuOpen(false)}
-                                onExportXLSX={() => {
-                                    exportToXLSX(questions, answers, destination);
-                                    setIsExportMenuOpen(false);
-                                }}
-                                onExportJSON={() => {
-                                    exportToJson(answers, destination);
-                                    setIsExportMenuOpen(false);
-                                }}
-                                onExportCSV={() => {
-                                    exportToCSV(questions, answers, destination);
-                                    setIsExportMenuOpen(false);
-                                }}
-                                parentRef={exportButtonRef}
-                            />
-                        )}
-                    </div>
-                </>
-                )}
+                {/* Show export button here if sidebar is expanded, or if collapsed but user is NOT an admin */}
+                {isLoggedIn && (!isCollapsed || !isAdmin) && exportButtonAndMenu}
             </div>
              {isCollapsed && (
                 <div className="mt-auto flex flex-col items-center gap-2">
+                    {/* When collapsed and user is an admin, show the export button here, at the bottom. */}
+                    {isAdmin && isLoggedIn && exportButtonAndMenu}
                     {isAdmin && (
                         <button 
                             onClick={onAdminClick} 
@@ -205,7 +207,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             title="Admin Dashboard"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M10 3.5a1.5 1.5 0 013 0V4a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0V9.5a1.5 1.5 0 01-3 0V8a1 1 0 01-1-1V5a1 1 0 011-1h3.5a1.5 1.5 0 010-3zM3 14a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" />
+                                <path d="M10 2a2.5 2.5 0 00-2.5 2.5c0 1.28.97 2.33 2.25 2.47V10h-1v2.5A2.5 2.5 0 0011.25 15H14a1 1 0 001-1v-2.5a2.5 2.5 0 00-2.5-2.5H11V7.47C12.03 7.33 13 6.28 13 5a2.5 2.5 0 00-2.5-2.5zM8.5 5A1.5 1.5 0 1110 6.5 1.5 1.5 0 018.5 5zM5 12.5A2.5 2.5 0 007.5 15H9v2.5A2.5 2.5 0 0011.5 20h.05A2.5 2.5 0 0014 17.5V16h1.5a2.5 2.5 0 002.5-2.5V12h-11z" />
                             </svg>
                         </button>
                     )}

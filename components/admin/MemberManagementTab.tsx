@@ -87,12 +87,15 @@ export const MemberManagementTab: React.FC<MemberManagementTabProps> = ({ sectio
   
         const role = row[roleHeaderIndex]?.trim().toLowerCase();
         
+        // FIX: Added missing properties `activeModel` and `fontSize` to conform to the UserProfile type.
         const newProfile: UserProfile = {
           id: email,
           email: email,
           name: row[nameHeaderIndex] || email.split('@')[0],
           apiKeys: { gemini: '', openai: '', claude: '', mapbox: '' },
           role: (role === 'admin' || role === 'user' || role === 'Monitor') ? role : 'user',
+          activeModel: 'gemini',
+          fontSize: 'md',
           team: row[teamHeaderIndex]?.trim() || undefined,
           editableSections: row[sectionsHeaderIndex] ? row[sectionsHeaderIndex].split(',').map(s => s.trim()).filter(Boolean) : undefined,
           timestamp: row[timestampHeaderIndex],

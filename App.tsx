@@ -428,6 +428,7 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
             <CommunityView
                 users={allUsers}
                 destination={destination}
+                currentUser={userProfile}
              />
           ) : (
              <StakeholderDashboard 

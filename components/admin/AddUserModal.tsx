@@ -40,12 +40,15 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onS
             alert('Please provide a valid name and email address.');
             return;
         }
+        // FIX: Added missing properties `fontSize` and `activeModel` to conform to the UserProfile type.
         const newUser: Omit<UserProfile, 'id' | 'apiKeys'> = {
             email,
             name,
             role,
             team: team || undefined,
             editableSections: editableSections.length > 0 ? editableSections : undefined,
+            fontSize: 'md',
+            activeModel: 'gemini',
         };
         onSave(newUser);
     };
