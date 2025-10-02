@@ -9,7 +9,6 @@ interface StakeholderCardProps {
     goal: GoalObject | null;
     timestamp?: string;
     onOpenDetail: () => void;
-    themeMode: 'light' | 'dark'; // Kept for prop compatibility, but will use dark theme
 }
 
 const getStatus = (answer: AnswerObject | null): { text: string; color: string } => {

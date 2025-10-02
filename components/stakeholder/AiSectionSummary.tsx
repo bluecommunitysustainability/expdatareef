@@ -12,10 +12,9 @@ interface AiSectionSummaryProps {
   sectionQuestions: Question[];
   sectionAnswers: Answers;
   destination: string;
-  themeMode: 'light' | 'dark';
 }
 
-export const AiSectionSummary: React.FC<AiSectionSummaryProps> = ({ sectionName, sectionQuestions, sectionAnswers, destination, themeMode }) => {
+export const AiSectionSummary: React.FC<AiSectionSummaryProps> = ({ sectionName, sectionQuestions, sectionAnswers, destination }) => {
   const [summary, setSummary] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -114,15 +113,11 @@ export const AiSectionSummary: React.FC<AiSectionSummaryProps> = ({ sectionName,
     return alignments.sort((a, b) => a.sdg.id - b.sdg.id);
   }, [sectionQuestions, sectionAnswers]);
 
-  const bgColor = themeMode === 'dark' ? 'bg-gray-900/50' : 'bg-gray-50/50';
-  const headingColor = themeMode === 'dark' ? 'text-gray-300' : 'text-gray-700';
-  const mutedTextColor = themeMode === 'dark' ? 'text-gray-500' : 'text-gray-500';
-
   return (
-    <div className={`${bgColor} p-4 rounded-lg border-l-4 ${appTheme.border.primary} mb-4`}>
-        <div className="flex flex-col lg:flex-row gap-8">
-            <div className="lg:w-1/2">
-                <h3 className={`text-md font-semibold ${headingColor} mb-2`}>AI Analysis</h3>
+    <div className={`bg-gray-900/50 p-4 rounded-lg border-l-4 ${appTheme.border.primary} mb-4`}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+            <div>
+                <h3 className={`text-md font-semibold text-gray-300 mb-2`}>AI Analysis</h3>
                  <div aria-live="polite">
                     {isLoading && (
                         <div className="flex items-center gap-2 text-sm text-gray-400">
@@ -133,14 +128,14 @@ export const AiSectionSummary: React.FC<AiSectionSummaryProps> = ({ sectionName,
                     {error && <p className="text-sm text-red-500">{error}</p>}
                     {!isLoading && !error && summary && shouldGenerate && <AiMarkdown text={summary} />}
                     {!isLoading && !error && !shouldGenerate && (
-                        <p className={`text-sm ${mutedTextColor} italic`}>
+                        <p className={`text-sm text-gray-500 italic`}>
                         Analysis will be available when at least 90% of metrics in this section are complete. ({answeredCount}/{totalCount})
                         </p>
                     )}
                 </div>
             </div>
-            <div className="lg:w-1/2">
-                <SdgAlignmentVisuals alignments={sdgAlignments} themeMode={themeMode} />
+            <div>
+                <SdgAlignmentVisuals alignments={sdgAlignments} />
             </div>
         </div>
     </div>

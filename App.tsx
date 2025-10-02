@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 
 // Components
@@ -20,7 +21,7 @@ import { StakeholderDashboard } from './components/stakeholder/StakeholderDashbo
 import { ExplanationPage } from './components/ExplanationPage';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { GoalsView } from './components/Goals';
-
+import { MapTokenModal } from './components/MapTokenModal';
 
 // Hooks, constants, utils, types
 import { useLocalStorage } from './hooks/useLocalStorage';
@@ -34,8 +35,12 @@ import { saveDataToDb, loadDataFromDb, saveUserProfile, loadUserProfile } from '
 import { getCurrentUserEmail, setCurrentUserEmail } from './utils/session';
 import { loadAllCsvData } from './utils/csvLoader';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
-import type { AppView, Answers, AiContact, InfoModalData, Metric, BcStrategy, ApiKeys, SdgDetailInfo, Poi, Tour, GstcCriterionDetail, AnswerObject, SectionTimestamps, UserProfile, Goals, GoalObject } from './types';
+// FIX: Import Poi, Tour types and mapData
+import type { AppView, Answers, AiContact, InfoModalData, Metric, BcStrategy, ApiKeys, SdgDetailInfo, GstcCriterionDetail, AnswerObject, SectionTimestamps, UserProfile, Goals, GoalObject, Poi, Tour } from './types';
+import { mapData } from './constants/mapData';
 import { seedInitialUsers, seedMonitorsForDestination } from './utils/seedUsers';
+
+const DEFAULT_MAPBOX_TOKEN = 'pk.eyJ1IjoibGFuZHN1cnZleW9ycyIsImEiOiJjbDU4cWpvYTgyNjNqM2NuenJmcGFycTZ0In0.69FMq1KPuwZs0Btd7-sSnw';
 
 const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & { 
   destination: string,
@@ -43,20 +48,22 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
   onInitialViewRendered: () => void,
   allDestinations: Destination[],
   onDestinationsUpdate: React.Dispatch<React.SetStateAction<Destination[]>>,
+  isSettingsPanelOpen: boolean,
+  setIsSettingsPanelOpen: React.Dispatch<React.SetStateAction<boolean>>,
+  pois: Poi[],
+  tours: Tour[],
+  onMapLoad: () => void,
+  mapboxToken: string,
 }> = ({
   destination,
   answers,
   aiContacts,
   sectionTimestamps,
   goals,
-  pois,
-  tours,
   setAnswers,
   setAiContacts,
   setSectionTimestamps,
   setGoals,
-  setPois,
-  setTours,
   handleChangeDestination,
   apiKeys,
   userProfile,
@@ -68,7 +75,13 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
   startInStakeholderView,
   onInitialViewRendered,
   allDestinations,
-  onDestinationsUpdate
+  onDestinationsUpdate,
+  isSettingsPanelOpen,
+  setIsSettingsPanelOpen,
+  pois,
+  tours,
+  onMapLoad,
+  mapboxToken
 }) => {
   const [view, setView] = useState<AppView>(startInStakeholderView ? 'stakeholder' : 'form');
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -80,7 +93,6 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
     gstc: GstcCriterionDetail[];
     bc: BcStrategy[];
   } | null>(null);
-  const [selectedPoi, setSelectedPoi] = useState<Poi | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [openSection, setOpenSection] = useState<string | null>(null);
   const [activeQuestion, setActiveQuestion] = useState<string | null>(null);
@@ -88,7 +100,6 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
 
   // Auth and Settings State
   const [isAuthPanelOpen, setIsAuthPanelOpen] = useState(false);
-  const [isSettingsPanelOpen, setIsSettingsPanelOpen] = useState(false);
   const [isDataSyncPanelOpen, setIsDataSyncPanelOpen] = useState(false);
   const [isAdminDashboardOpen, setIsAdminDashboardOpen] = useState(false);
   
@@ -131,10 +142,9 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
         setIsSettingsPanelOpen(false);
         setIsAuthPanelOpen(false);
         setIsInfoSidebarOpen(false);
-        setSelectedPoi(null);
         onInitialViewRendered();
     }
-  }, [startInStakeholderView, onInitialViewRendered]);
+  }, [startInStakeholderView, onInitialViewRendered, setIsSettingsPanelOpen]);
 
   useEffect(() => {
     if (isLoggedIn && isAuthPanelOpen) {
@@ -192,12 +202,6 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
       })
       .catch(error => console.error("Failed to load Info Hub data:", error));
   }, []);
-
-  useEffect(() => {
-    if (view !== 'map' && selectedPoi) {
-      setSelectedPoi(null);
-    }
-  }, [view, selectedPoi]);
 
   const { totalQuestions, completedQuestions } = useMemo(() => {
     const total = questions.length;
@@ -259,7 +263,6 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
     setIsSettingsPanelOpen(false);
     setIsAuthPanelOpen(false);
     setIsInfoSidebarOpen(false);
-    setSelectedPoi(null);
     setView(newView);
   };
 
@@ -278,17 +281,12 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
         setIsCollapsed={setIsSidebarCollapsed}
         onUserClick={() => setIsAuthPanelOpen(true)}
         onAdminClick={() => setIsAdminDashboardOpen(true)}
-        onPoiSelect={setSelectedPoi}
         onQuestionSelect={handleSidebarQuestionSelect}
         userProfile={userProfile}
         infoHubData={infoHubData}
         setInfoModalData={setInfoModalData}
-        pois={pois}
-        setPois={setPois}
-        tours={tours}
-        setTours={setTours}
-        mapboxToken={apiKeys.mapbox}
         bgImage={bgImage}
+        onMapLoad={onMapLoad}
       />
       <div className={`min-w-0 transition-all duration-300 ease-in-out min-h-screen ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-96'} relative`}>
         {isSidebarCollapsed && view !== 'stakeholder' && (
@@ -398,14 +396,7 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
               questions={questions}
             />
           ) : view === 'map' ? (
-            <MapView 
-              destination={destination} 
-              onPoiSelect={setSelectedPoi} 
-              pois={pois}
-              setPois={setPois}
-              mapboxToken={apiKeys.mapbox}
-              tours={tours}
-            />
+            <MapView onMapLoad={onMapLoad} />
           ) : (
              <StakeholderDashboard 
                 questions={questions}
@@ -418,7 +409,8 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
                 goals={goals}
                 pois={pois}
                 tours={tours}
-                mapboxToken={apiKeys.mapbox}
+                mapboxToken={mapboxToken}
+// FIX: Removed onMapLoad prop from StakeholderDashboard as it's not a valid prop for the component.
              />
           )}
         </main>
@@ -440,8 +432,8 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
         data={infoModalData}
       />
       <PoiDetailPanel
-        poi={selectedPoi}
-        onClose={() => setSelectedPoi(null)}
+        poi={null}
+        onClose={() => {}}
       />
       <AuthPanel
         isOpen={isAuthPanelOpen}
@@ -469,11 +461,10 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
             isOpen={isAdminDashboardOpen}
             onClose={() => setIsAdminDashboardOpen(false)}
             destinations={allDestinations}
-// FIX: The `onDestinationsUpdate` prop was passed `setAllDestinations`, which is not defined in the scope of `MainLayout`. The correct prop to pass is `onDestinationsUpdate`.
             onDestinationsUpdate={onDestinationsUpdate}
             onAddNewDestination={handleAddNewDestination}
             questions={questions}
-            mapboxToken={apiKeys.mapbox}
+            mapboxToken={mapboxToken}
             apiKeys={apiKeys}
         />
        )}
@@ -482,20 +473,15 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
 }
 
 interface AppProps {
-  selectedDestination: string;
   answers: Answers;
   aiContacts: Record<string, AiContact[]>;
   apiKeys: ApiKeys;
   sectionTimestamps: SectionTimestamps;
   goals: Goals;
-  pois: Poi[];
-  tours: Tour[];
   setAnswers: React.Dispatch<React.SetStateAction<Answers>>;
   setAiContacts: React.Dispatch<React.SetStateAction<Record<string, AiContact[]>>>;
   setSectionTimestamps: React.Dispatch<React.SetStateAction<SectionTimestamps>>;
   setGoals: React.Dispatch<React.SetStateAction<Goals>>;
-  setPois: React.Dispatch<React.SetStateAction<Poi[]>>;
-  setTours: React.Dispatch<React.SetStateAction<Tour[]>>;
   handleChangeDestination: () => void;
   userProfile: UserProfile | null;
   handleLogin: (email: string) => Promise<void>;
@@ -503,8 +489,6 @@ interface AppProps {
   handleUpdateProfile: (profile: UserProfile) => Promise<void>;
   handleBulkMergeAnswers: (newAnswers: Answers) => void;
   isAdmin: boolean;
-  startInStakeholderView: boolean;
-  onInitialViewRendered: () => void;
 }
 
 function App() {
@@ -523,12 +507,6 @@ function App() {
   const goalsKey = useMemo(() => `goals_${selectedDestination || 'none'}`, [selectedDestination]);
   const [goals, setGoals] = useLocalStorage<Goals>(goalsKey, {});
 
-  const poisKey = useMemo(() => `pois_${selectedDestination || 'none'}`, [selectedDestination]);
-  const [pois, setPois] = useLocalStorage<Poi[]>(poisKey, []);
-
-  const toursKey = useMemo(() => `tours_${selectedDestination || 'none'}`, [selectedDestination]);
-  const [tours, setTours] = useLocalStorage<Tour[]>(toursKey, []);
-
   const aiContactsKey = useMemo(() => `aiContacts_${selectedDestination || 'none'}`, [selectedDestination]);
   const [aiContacts, setAiContacts] = useLocalStorage<Record<string, AiContact[]>>(aiContactsKey, {});
   
@@ -542,7 +520,25 @@ function App() {
   const [landingView, setLandingView] = useState<'selector' | 'explanation'>('selector');
   const lastDestinationFromStorage = JSON.parse(localStorage.getItem('lastSelectedDestination') || '""');
   const [landingBg, setLandingBg] = useState<{ image: string; name: string } | null>(null);
+  const [isSettingsPanelOpen, setIsSettingsPanelOpen] = useState(false);
+  const [showMapTokenModal, setShowMapTokenModal] = useState(false);
 
+  const selectedPois = useMemo(() => mapData[selectedDestination] || [], [selectedDestination]);
+  const [tours, setTours] = useState<Tour[]>([]);
+
+  const mapboxToken = useMemo(() => apiKeys.mapbox || DEFAULT_MAPBOX_TOKEN, [apiKeys.mapbox]);
+
+  const handleMapLoad = () => {
+    if (userProfile && !apiKeys.mapbox) { // Only count if using the default token
+        const newCount = (userProfile.mapLoadCount || 0) + 1;
+        if (newCount > 3) {
+            setShowMapTokenModal(true);
+        }
+        const updatedProfile = { ...userProfile, mapLoadCount: newCount };
+        setUserProfile(updatedProfile);
+        saveUserProfile(updatedProfile); // Persist silently without alert
+    }
+  };
 
   useEffect(() => {
     const images = allDestinations
@@ -606,6 +602,7 @@ function App() {
               role: 'user', 
               activeModel: 'gemini',
               fontSize: 'md',
+              mapLoadCount: 0,
           };
           await saveUserProfile(newProfile);
           profile = newProfile;
@@ -665,7 +662,7 @@ function App() {
     setSectionTimestamps(prev => ({...prev, ...newTimestamps}));
     setAnswers(prev => ({...prev, ...newAnswers}));
   };
-  
+
   const selectedDestinationObject = useMemo(() => 
     allDestinations.find(d => d.name === selectedDestination), 
     [allDestinations, selectedDestination]
@@ -676,90 +673,95 @@ function App() {
 
   if (!selectedDestination) {
     return (
-      <div 
-        className="min-h-screen text-white flex flex-col items-center justify-center p-4 relative bg-cover bg-center"
-        style={{ backgroundImage: `url(${landingBg?.image || 'https://storage.ning.com/topology/rest/1.0/file/get/13715201495?profile=original'})` }}
-      >
-        <div className="absolute inset-0 bg-gray-900 bg-opacity-70"></div>
+      <>
+        <div 
+          className="min-h-screen text-white flex flex-col items-center justify-center p-4 relative bg-cover bg-center"
+          style={{ backgroundImage: `url(${landingBg?.image || 'https://storage.ning.com/topology/rest/1.0/file/get/13715201495?profile=original'})` }}
+        >
+          <div className="absolute inset-0 bg-gray-900 bg-opacity-70"></div>
 
-        <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
-            <div className="flex items-center gap-2 bg-gray-800/50 backdrop-blur-sm p-1 pr-3 rounded-full">
-                <button
-                    onClick={() => {
-                        if (lastDestinationFromStorage) {
-                            setStartInStakeholderView(true);
-                            handleDestinationSelect(lastDestinationFromStorage);
-                        } else {
-                            setLandingView('explanation');
-                        }
-                    }}
-                    className="p-1 rounded-full hover:bg-gray-700/50"
-                    title={lastDestinationFromStorage ? `Go to ${lastDestinationFromStorage} Dashboard` : "About the Assessment"}
-                >
-                    <div className="h-8 w-8 rounded-full bg-gray-700 flex items-center justify-center">
-                       <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                       </svg>
-                    </div>
-                </button>
-                {landingBg && <span className="text-sm font-semibold text-gray-300">{landingBg.name}</span>}
-            </div>
-            <button onClick={() => setIsAuthPanelOpen(true)} className="p-1 rounded-full hover:bg-gray-700/50 bg-gray-800/50 backdrop-blur-sm" title="User Account">
-                {isLoggedIn && userAvatar ? (
-                    <img src={userAvatar} alt="User Avatar" className="h-8 w-8 rounded-full object-cover" />
-                ) : (
-                    <div className="h-8 w-8 rounded-full bg-gray-700 flex items-center justify-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                    </div>
-                )}
-          </button>
+          <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+              <div className="flex items-center gap-2 bg-gray-800/50 backdrop-blur-sm p-1 pr-3 rounded-full">
+                  <button
+                      onClick={() => {
+                          if (lastDestinationFromStorage) {
+                              setStartInStakeholderView(true);
+                              handleDestinationSelect(lastDestinationFromStorage);
+                          } else {
+                              setLandingView('explanation');
+                          }
+                      }}
+                      className="p-1 rounded-full hover:bg-gray-700/50"
+                      title={lastDestinationFromStorage ? `Go to ${lastDestinationFromStorage} Dashboard` : "About the Assessment"}
+                  >
+                      <div className="h-8 w-8 rounded-full bg-gray-700 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                      </div>
+                  </button>
+                  {landingBg && <span className="text-sm font-semibold text-gray-300">{landingBg.name}</span>}
+              </div>
+              <button onClick={() => setIsAuthPanelOpen(true)} className="p-1 rounded-full hover:bg-gray-700/50 bg-gray-800/50 backdrop-blur-sm" title="User Account">
+                  {isLoggedIn && userAvatar ? (
+                      <img src={userAvatar} alt="User Avatar" className="h-8 w-8 rounded-full object-cover" />
+                  ) : (
+                      <div className="h-8 w-8 rounded-full bg-gray-700 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                      </div>
+                  )}
+            </button>
+          </div>
+
+          {landingView === 'selector' ? (
+              <div className="relative z-10 w-full max-w-lg bg-gray-800/80 backdrop-blur-sm p-8 rounded-lg shadow-2xl text-center">
+                <img src="https://labs.landsurveyorsunited.com/datareef/icons/web/android-chrome-192x192.png" alt="DataReef Logo" className="mx-auto h-64 w-auto mb-4" />
+                <h1 className="text-3xl font-bold text-teal-400 mb-2">DataReef Observatory</h1>
+                <p className="text-gray-400 mb-2">Because without the data there will soon be no reef.</p>
+                <p className="text-gray-400 text-sm mb-6 italic">Human Sourced Data with AI insights for a more Sustainable Tourism Impact.</p>
+                <DestinationSelector 
+                  destinations={destinationNames}
+                  selectedDestination={selectedDestination}
+                  onSelectDestination={handleDestinationSelect}
+                />
+              </div>
+          ) : (
+              <ExplanationPage onBack={() => setLandingView('selector')} />
+          )}
+
+          <AuthPanel
+            isOpen={isAuthPanelOpen}
+            onClose={() => setIsAuthPanelOpen(false)}
+            onLogin={async (email) => {
+              await handleLogin(email);
+              setIsAuthPanelOpen(false);
+            }}
+          />
         </div>
-
-        {landingView === 'selector' ? (
-            <div className="relative z-10 w-full max-w-lg bg-gray-800/80 backdrop-blur-sm p-8 rounded-lg shadow-2xl text-center">
-              <img src="https://labs.landsurveyorsunited.com/datareef/icons/web/android-chrome-192x192.png" alt="DataReef Logo" className="mx-auto h-64 w-auto mb-4" />
-              <h1 className="text-3xl font-bold text-teal-400 mb-2">DataReef Observatory</h1>
-              <p className="text-gray-400 mb-2">Because without the data there will soon be no reef.</p>
-              <p className="text-gray-400 text-sm mb-6 italic">Human Sourced Data with AI insights for a more Sustainable Tourism Impact.</p>
-              <DestinationSelector 
-                destinations={destinationNames}
-                selectedDestination={selectedDestination}
-                onSelectDestination={handleDestinationSelect}
-              />
-            </div>
-        ) : (
-            <ExplanationPage onBack={() => setLandingView('selector')} />
-        )}
-
-        <AuthPanel
-          isOpen={isAuthPanelOpen}
-          onClose={() => setIsAuthPanelOpen(false)}
-          onLogin={async (email) => {
-            await handleLogin(email);
-            setIsAuthPanelOpen(false);
+        <MapTokenModal 
+          isOpen={showMapTokenModal}
+          onClose={() => setShowMapTokenModal(false)}
+          onGoToSettings={() => {
+              setShowMapTokenModal(false);
+              setIsSettingsPanelOpen(true);
           }}
         />
-      </div>
+      </>
     );
   }
 
   return (
     <ThemeProvider destination={selectedDestination} primaryColor={primaryColor}>
       <MainLayout 
-        destination={selectedDestination}
         answers={answers}
         aiContacts={aiContacts}
         apiKeys={apiKeys}
         sectionTimestamps={sectionTimestamps}
         goals={goals}
-        pois={pois}
-        tours={tours}
         setAnswers={setAnswers}
         setAiContacts={setAiContacts}
         setSectionTimestamps={setSectionTimestamps}
         setGoals={setGoals}
-        setPois={setPois}
-        setTours={setTours}
         handleChangeDestination={handleChangeDestination}
         userProfile={userProfile}
         handleLogin={handleLogin}
@@ -769,8 +771,23 @@ function App() {
         isAdmin={isAdmin}
         startInStakeholderView={startInStakeholderView}
         onInitialViewRendered={() => setStartInStakeholderView(false)}
+        destination={selectedDestination}
         allDestinations={allDestinations}
         onDestinationsUpdate={setAllDestinations}
+        isSettingsPanelOpen={isSettingsPanelOpen}
+        setIsSettingsPanelOpen={setIsSettingsPanelOpen}
+        pois={selectedPois}
+        tours={tours}
+        onMapLoad={handleMapLoad}
+        mapboxToken={mapboxToken}
+      />
+      <MapTokenModal 
+        isOpen={showMapTokenModal}
+        onClose={() => setShowMapTokenModal(false)}
+        onGoToSettings={() => {
+            setShowMapTokenModal(false);
+            setIsSettingsPanelOpen(true);
+        }}
       />
     </ThemeProvider>
   );

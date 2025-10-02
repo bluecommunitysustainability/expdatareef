@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { Metric, SdgDetailInfo, GstcCriterionDetail, BcStrategy, InfoModalData, Poi, Tour } from '../../types';
+import type { Metric, SdgDetailInfo, GstcCriterionDetail, BcStrategy, InfoModalData } from '../../types';
 import { MetricsTab, SdgTab, GstcTab, BcTab } from '../info_sidebar';
 import { useTheme } from '../../context/ThemeContext';
 import { Accordion } from './Accordion';
@@ -14,14 +14,12 @@ interface StakeholderSidebarContentProps {
     bc: BcStrategy[];
   } | null;
   onItemClick: (item: InfoModalData) => void;
-  pois: Poi[];
-  tours: Tour[];
-  mapboxToken: string;
+  onMapLoad?: () => void;
 }
 
 type Tab = 'UNSDGs' | 'GSTC' | 'BC';
 
-export const StakeholderSidebarContent: React.FC<StakeholderSidebarContentProps> = ({ onBack, data, onItemClick, pois, tours, mapboxToken }) => {
+export const StakeholderSidebarContent: React.FC<StakeholderSidebarContentProps> = ({ onBack, data, onItemClick, onMapLoad }) => {
   const [activeTab, setActiveTab] = useState<Tab>('UNSDGs');
   const theme = useTheme();
   
@@ -43,10 +41,6 @@ export const StakeholderSidebarContent: React.FC<StakeholderSidebarContentProps>
     }
   };
 
-  const publishedPois = pois.filter(p => p.status === 'published');
-  const publishedTours = tours.filter(t => t.status === 'published');
-
-
   return (
     <div className="flex flex-col h-full">
       <div className="p-4">
@@ -61,12 +55,8 @@ export const StakeholderSidebarContent: React.FC<StakeholderSidebarContentProps>
         </button>
       </div>
 
-      <Accordion title="Sustainability Map & Tours">
-        <StakeholderMapWidget
-          pois={publishedPois}
-          tours={publishedTours}
-          mapboxToken={mapboxToken}
-        />
+      <Accordion title="Sustainability Map">
+        <StakeholderMapWidget onMapLoad={onMapLoad} />
       </Accordion>
       
        <nav className="flex-shrink-0 border-y border-gray-700/50">

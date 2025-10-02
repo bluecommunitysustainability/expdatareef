@@ -1,8 +1,5 @@
-
-
 // FIX: Removed erroneous circular import of 'Question' type. The type is defined within this file.
 
-// FIX: Removed circular self-import of QuestionType.
 // This file was re-created to define all the necessary types for the application.
 
 // FIX: Centralized AppView type to be used across components.
@@ -136,10 +133,10 @@ export interface UserProfile {
   allowedDestinations?: string[];
   customLogo?: string; // base64 data url for logo
   primaryColor?: string; // e.g., 'teal', 'blue'
-  // FIX: Added activeModel to persist the user's AI model choice from settings.
   activeModel?: string;
   editableSections?: string[];
   fontSize?: 'sm' | 'md' | 'lg';
+  mapLoadCount?: number;
 
   // New fields from sheet
   timestamp?: string;

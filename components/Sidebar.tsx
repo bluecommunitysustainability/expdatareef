@@ -3,13 +3,13 @@ import { FormSidebarContent } from './sidebar/FormSidebarContent';
 import { DashboardSidebarContent } from './sidebar/DashboardSidebarContent';
 import { MapSidebarContent } from './sidebar/MapSidebarContent';
 import { StakeholderSidebarContent } from './sidebar/StakeholderSidebarContent';
-import type { AppView, Answers, Question, Poi, Tour, UserProfile, Metric, SdgDetailInfo, GstcCriterionDetail, BcStrategy, InfoModalData } from '../types';
+import type { AppView, Answers, Question, UserProfile, Metric, SdgDetailInfo, GstcCriterionDetail, BcStrategy, InfoModalData } from '../types';
 import { useTheme } from '../context/ThemeContext';
 import SidebarBranding from './sidebar/SidebarBranding';
 import { ExportMenu } from './ExportMenu';
-import { exportToXLSX, exportToJson, exportToCSV } from '../../utils/exporters';
+import { exportToXLSX, exportToJson, exportToCSV } from '../utils/exporters';
 import { GuideModal } from './guide/GuideModal';
-import { availableThemes } from '../../constants/teamColors';
+import { availableThemes } from '../constants/teamColors';
 
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(' ');
@@ -26,17 +26,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setIsCollapsed,
   onUserClick,
   onAdminClick,
-  onPoiSelect,
   onQuestionSelect,
   userProfile,
   infoHubData,
   setInfoModalData,
-  pois,
-  setPois,
-  tours,
-  setTours,
-  mapboxToken,
-  bgImage
+  bgImage,
+  onMapLoad,
 }) => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
@@ -230,9 +225,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     onBack={() => setView('form')} 
                     data={infoHubData}
                     onItemClick={setInfoModalData}
-                    pois={pois}
-                    tours={tours}
-                    mapboxToken={mapboxToken}
+                    onMapLoad={onMapLoad}
                 />
             ) : view === 'form' ? (
                 <FormSidebarContent 
@@ -249,11 +242,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             ) : (
                 <MapSidebarContent 
                     destination={destination} 
-                    onPoiSelect={onPoiSelect} 
-                    pointsOfInterest={pois}
-                    setTours={setTours}
-                    mapboxToken={mapboxToken}
-                    isAdmin={isAdmin}
                 />
             )}
             </div>
@@ -296,7 +284,6 @@ interface SidebarProps {
   setIsCollapsed: (isCollapsed: boolean) => void;
   onUserClick: () => void;
   onAdminClick: () => void;
-  onPoiSelect: (poi: Poi) => void;
   onQuestionSelect: (questionId: string) => void;
   userProfile: UserProfile | null;
   infoHubData: {
@@ -306,10 +293,7 @@ interface SidebarProps {
     bc: BcStrategy[];
   } | null;
   setInfoModalData: (data: InfoModalData | null) => void;
-  pois: Poi[];
-  setPois: React.Dispatch<React.SetStateAction<Poi[]>>;
-  tours: Tour[];
-  setTours: React.Dispatch<React.SetStateAction<Tour[]>>;
-  mapboxToken: string;
   bgImage: string;
+  // FIX: Add onMapLoad to the SidebarProps interface to fix type error.
+  onMapLoad: () => void;
 }
