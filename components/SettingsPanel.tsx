@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { UserProfile } from '../../types';
-import { useTheme } from '../../context/ThemeContext';
-import { ProfileSettingsTab, BrandingSettingsTab, PermissionsSettingsTab, AccessibilitySettingsTab } from './settings';
+import { useTheme } from '../context/ThemeContext';
+import { BrandingSettingsTab } from './settings';
 
 interface SettingsPanelProps {
   isOpen: boolean;
@@ -10,17 +10,13 @@ interface SettingsPanelProps {
   onUpdateProfile: (profile: UserProfile) => void;
 }
 
-type Tab = 'profile' | 'branding' | 'permissions' | 'accessibility';
-
 export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, userProfile, onUpdateProfile }) => {
-  const [activeTab, setActiveTab] = useState<Tab>('profile');
   const [editedProfile, setEditedProfile] = useState<UserProfile | null>(userProfile);
   const theme = useTheme();
 
   useEffect(() => {
     if (isOpen) {
       setEditedProfile(userProfile);
-      setActiveTab('profile'); // Reset to default tab
     }
   }, [isOpen, userProfile]);
 
@@ -31,8 +27,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, u
     onClose();
   };
   
-  const canSeeBranding = userProfile?.role === 'admin' || userProfile?.role === 'Monitor';
-
   if (!userProfile) return null;
 
   return (
@@ -51,45 +45,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, u
           </button>
         </header>
 
-        <nav className="flex-shrink-0 border-b border-gray-700">
-            <div className="flex space-x-1 p-2">
-                <button 
-                    onClick={() => setActiveTab('profile')}
-                    className={`flex-1 py-2 px-2 text-sm font-semibold rounded-md transition-colors ${activeTab === 'profile' ? `${theme.background.secondary} text-white` : 'text-gray-300 hover:bg-gray-700'}`}
-                >
-                    Profile
-                </button>
-                {canSeeBranding && (
-                  <button 
-                      onClick={() => setActiveTab('branding')}
-                      className={`flex-1 py-2 px-2 text-sm font-semibold rounded-md transition-colors ${activeTab === 'branding' ? `${theme.background.secondary} text-white` : 'text-gray-300 hover:bg-gray-700'}`}
-                  >
-                      Branding & AI
-                  </button>
-                )}
-                <button 
-                    onClick={() => setActiveTab('permissions')}
-                    className={`flex-1 py-2 px-2 text-sm font-semibold rounded-md transition-colors ${activeTab === 'permissions' ? `${theme.background.secondary} text-white` : 'text-gray-300 hover:bg-gray-700'}`}
-                >
-                    Permissions
-                </button>
-                <button 
-                    onClick={() => setActiveTab('accessibility')}
-                    className={`flex-1 py-2 px-2 text-sm font-semibold rounded-md transition-colors ${activeTab === 'accessibility' ? `${theme.background.secondary} text-white` : 'text-gray-300 hover:bg-gray-700'}`}
-                >
-                    Accessibility
-                </button>
-            </div>
-        </nav>
-
         <main className="flex-1 overflow-y-auto p-6">
             {editedProfile && (
-              <>
-                {activeTab === 'profile' && <ProfileSettingsTab profile={editedProfile} setProfile={setEditedProfile} />}
-                {activeTab === 'branding' && canSeeBranding && <BrandingSettingsTab profile={editedProfile} setProfile={setEditedProfile} />}
-                {activeTab === 'permissions' && <PermissionsSettingsTab profile={editedProfile} />}
-                {activeTab === 'accessibility' && <AccessibilitySettingsTab profile={editedProfile} setProfile={setEditedProfile} />}
-              </>
+              <BrandingSettingsTab profile={editedProfile} setProfile={setEditedProfile} />
             )}
         </main>
         

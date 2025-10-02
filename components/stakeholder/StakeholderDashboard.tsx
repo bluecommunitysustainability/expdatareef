@@ -9,6 +9,8 @@ import { ReportButton } from './ReportButton';
 import { exportStakeholderToXLSX } from '../../utils/exporters';
 import { AiSectionSummary } from './AiSectionSummary';
 import { useTheme } from '../../context/ThemeContext';
+import { MonthlyOccupancyChart } from '../dashboard/EnergyChart';
+import { WasteSankeyChart } from '../dashboard/WasteChart';
 
 interface StakeholderDashboardProps {
   questions: Question[];
@@ -65,12 +67,6 @@ export const StakeholderDashboard: React.FC<StakeholderDashboardProps> = ({
     return orderedSections.filter(s => s === metricGroup);
   }, [metricGroup, orderedSections]);
 
-  const { completed, total } = useMemo(() => {
-    const totalMetrics = questions.length;
-    const completedMetrics = Object.values(answers).filter((a: AnswerObject) => a.value !== null && a.value !== '' && a.value !== undefined).length;
-    return { completed: completedMetrics, total: totalMetrics };
-  }, [questions, answers]);
-
   const handleGenerateReport = () => {
     const metricsToExport = metricGroup === 'ALL' ? questions : questions.filter(q => q.section === metricGroup);
     exportStakeholderToXLSX(metricsToExport, answers, selectedDestination, sectionTimestamps, metricGroup);
@@ -108,7 +104,7 @@ export const StakeholderDashboard: React.FC<StakeholderDashboardProps> = ({
                </div>
            </div>
            <div className="mt-4">
-               <ProgressBar completed={completed} total={total} />
+               <ProgressBar questions={questions} answers={answers} />
            </div>
         </header>
 
@@ -132,6 +128,17 @@ export const StakeholderDashboard: React.FC<StakeholderDashboardProps> = ({
                     destination={selectedDestination}
                     themeMode='dark'
                   />
+                   {section === 'Economic Performance' && (
+                        <div className="my-6">
+                            <MonthlyOccupancyChart answers={answers} />
+                        </div>
+                    )}
+                    {section === 'Waste & Wastewater Management' && (
+                        <div className="my-6">
+                            <h3 className="text-lg font-semibold text-gray-200 mb-4 text-center">Waste Management Flow</h3>
+                            <WasteSankeyChart answers={answers} />
+                        </div>
+                    )}
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mt-6">
                       {sectionQuestions.map(q => (
                           <StakeholderCard 

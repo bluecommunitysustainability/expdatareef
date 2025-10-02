@@ -84,7 +84,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ questions, answers }) 
         aria-valuemin={0}
         aria-valuemax={100}
         aria-label={`${overallPercentage}% of all metrics completed`}
-        className="w-full bg-gray-700 rounded-full h-3 flex overflow-hidden"
+        className="w-full bg-gray-700 rounded-full h-3 flex"
       >
         {sectionsData.map((section, index) => (
           <div
@@ -94,7 +94,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ questions, answers }) 
           >
             {/* Filled portion */}
             <div
-              className="h-full rounded-full"
+              className="h-full"
               style={{
                 width: `${section.sectionPercentage}%`,
                 backgroundColor: section.color,

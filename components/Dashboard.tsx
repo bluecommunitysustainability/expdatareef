@@ -8,8 +8,8 @@ import { QualitativeCard } from './dashboard/QualitativeCard';
 import { Modal } from './Modal';
 import { useTheme } from '../context/ThemeContext';
 import { AiMarkdown } from './AiMarkdown';
-import { WasteChart } from './dashboard/WasteChart';
-import { EnergyChart } from './dashboard/EnergyChart';
+import { WasteSankeyChart } from './dashboard/WasteChart';
+import { EnergyChart, MonthlyOccupancyChart } from './dashboard/EnergyChart';
 import { WordCloud } from './dashboard/WordCloud';
 import { generateFullAnswerContext } from '../utils/aiHelper';
 import { AiSectionSummary } from './stakeholder/AiSectionSummary';
@@ -99,6 +99,9 @@ ${fullContext}
       
       if (!answerObj || answerValue === null || answerValue === undefined) return null;
 
+      // Don't render a card for the question that has its own chart
+      if (question.id === 'q44a') return null;
+
       switch(question.type) {
           case QuestionType.NUMBER:
           case QuestionType.BOOLEAN:
@@ -147,8 +150,8 @@ ${fullContext}
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
             <div>
-                <h3 className="text-lg font-semibold text-gray-200 mb-4 text-center">Waste Management Overview</h3>
-                <WasteChart answers={answers} />
+                <h3 className="text-lg font-semibold text-gray-200 mb-4 text-center">Waste Management Flow</h3>
+                <WasteSankeyChart answers={answers} />
             </div>
             <div>
                 <h3 className="text-lg font-semibold text-gray-200 mb-4 text-center">Energy Consumption Mix</h3>
@@ -183,6 +186,13 @@ ${fullContext}
                 destination={destination}
                 themeMode="dark"
               />
+            
+            {section === 'Economic Performance' && (
+                <div className="my-6 bg-gray-800/25 rounded-lg p-4">
+                    <MonthlyOccupancyChart answers={answers} />
+                </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
               {sectionQuestions.map(renderWidget)}
             </div>

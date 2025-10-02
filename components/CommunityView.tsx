@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import type { UserProfile } from '../types';
+import { ForceDirectedGraph } from './AiAssistPanel';
 
 interface CommunityViewProps {
     users: UserProfile[];
@@ -39,11 +40,20 @@ export const CommunityView: React.FC<CommunityViewProps> = ({ users, destination
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-8">
             <div>
                 <h2 className="text-2xl font-bold text-white">Community Team for {destination}</h2>
                 <p className="text-gray-400 mt-1">These are the designated Monitors and Administrators for this destination.</p>
             </div>
+            
+            <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700/50">
+                <h3 className="text-lg font-semibold text-white mb-2 text-center">Stakeholder Network</h3>
+                <p className="text-sm text-gray-400 text-center mb-4">This graph shows connections between team members based on shared responsibilities. Drag nodes to explore.</p>
+                <div className="h-[400px] w-full">
+                     <ForceDirectedGraph users={teamMembers} />
+                </div>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {teamMembers.map(user => (
                     <UserCard key={user.id} user={user} />

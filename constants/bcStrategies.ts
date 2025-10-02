@@ -5,19 +5,19 @@ export const bcStrategies: BcStrategy[] = [
     type: 'bc',
     name: 'Improve Building Design',
     description: 'Build more sustainably and for disaster reduction.',
-    iconUrl: 'https://drive.google.com/uc?export=view&id=1XU2R0nvO7IZu_d8lOoigPHvvj0q78jih'
+    iconUrl: 'https://storage.ning.com/topology/rest/1.0/file/get/13733270853?profile=RESIZE_584x'
   },
   {
     type: 'bc',
     name: 'Promote Mass Transportation',
     description: 'Reduce carbon emissions',
-    iconUrl: 'https://drive.google.com/uc?export=view&id=1BN5QkNeZAaTF03TPsum3IKr2pFBIKto1'
+    iconUrl: 'https://storage.ning.com/topology/rest/1.0/file/get/13733271052?profile=RESIZE_584x'
   },
   {
     type: 'bc',
     name: 'Reduce Energy Use',
     description: '',
-    iconUrl: 'https://drive.google.com/uc?export=view&id=1nVHoj6Ag4FNq1el8orXtSoEWBzxagKWA'
+    iconUrl: 'https://storage.ning.com/topology/rest/1.0/file/get/13733270889?profile=RESIZE_584x'
   },
   {
     type: 'bc',
