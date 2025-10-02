@@ -4,9 +4,9 @@ import type { Destination } from '../constants/destinations';
 import { destinationObjects } from '../constants/destinations';
 
 const adminUsers: Omit<UserProfile, 'apiKeys' | 'id'>[] = [
-    { name: 'ChrisH', email: 'mr.christopher.harris@gmail.com', role: 'admin', activeModel: 'gemini', fontSize: 'md', mapLoadCount: 0 },
-    { name: 'ChrisL', email: 'atozenith@landsurveyorsunited.com', role: 'admin', activeModel: 'gemini', fontSize: 'md', mapLoadCount: 0 },
-    { name: 'Blue Community', email: 'blue.community.info@gmail.com', role: 'admin', activeModel: 'gemini', fontSize: 'md', mapLoadCount: 0 },
+    { name: 'ChrisH', email: 'mr.christopher.harris@gmail.com', role: 'admin', activeModel: 'gemini', fontSize: 'md' },
+    { name: 'ChrisL', email: 'atozenith@landsurveyorsunited.com', role: 'admin', activeModel: 'gemini', fontSize: 'md' },
+    { name: 'Blue Community', email: 'blue.community.info@gmail.com', role: 'admin', activeModel: 'gemini', fontSize: 'md' },
 ];
 
 const sectionAbbreviations: Record<string, string> = {
@@ -65,7 +65,6 @@ const generateMonitorsForDestination = (destination: Destination): Omit<UserProf
             expertise: `Specializing in ${assignedSections.join(' and ')} for ${destination.name}.`,
             activeModel: 'gemini',
             fontSize: 'md',
-            mapLoadCount: 0,
         });
     });
     return monitors;

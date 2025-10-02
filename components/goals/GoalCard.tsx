@@ -115,11 +115,10 @@ export const GoalCard: React.FC<GoalCardProps> = ({
 
         const result = JSON.parse(response.text.trim());
         if (result.suggestedGoal && result.rationale) {
-            alert(`AI Suggestion: ${result.rationale}`);
             onGoalUpdate(question.id, {
                 value: result.suggestedGoal,
-                comments: currentGoal?.comments ?? `AI Rationale: ${result.rationale}`,
-                targetDate: currentGoal?.targetDate
+                comments: `AI Rationale: ${result.rationale}`,
+                targetDate: targetDate
             });
         }
 

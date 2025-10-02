@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { destinations } from '../../constants/destinations';
+import { stakeholderBackgroundImages } from '../../constants/stakeholderImages';
 import type { Answers, Question, SectionTimestamps, AnswerObject, Poi, Tour, Goals } from '../../types';
 import { ProgressBar } from '../ProgressBar';
 import { StakeholderCard } from './StakeholderCard';
@@ -38,6 +39,8 @@ export const StakeholderDashboard: React.FC<StakeholderDashboardProps> = ({
     setSelectedDestination(initialDestination);
   }, [initialDestination]);
 
+  const backgroundImage = stakeholderBackgroundImages[selectedDestination] || stakeholderBackgroundImages['default'];
+
   const { questionsBySection, orderedSections, metricGroups } = useMemo(() => {
     const sections: Record<string, Question[]> = {};
     const order: string[] = [];
@@ -74,7 +77,12 @@ export const StakeholderDashboard: React.FC<StakeholderDashboardProps> = ({
   };
   
   return (
-    <div className={`h-screen w-full flex flex-col relative bg-gray-900 text-white`}>
+    <div className={`h-screen w-full flex flex-col relative bg-gray-900 text-white transition-colors duration-300`}>
+      <div 
+        className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000 opacity-20"
+        style={{ backgroundImage: `url(${backgroundImage})` }}
+      />
+      
       <div className="relative z-10 p-4 sm:p-6 lg:p-8 flex flex-col h-full">
         {/* Top Bar */}
         <header className={`bg-gray-800/50 backdrop-blur-md p-4 rounded-xl shadow-lg border border-gray-700/50`}>
@@ -122,6 +130,7 @@ export const StakeholderDashboard: React.FC<StakeholderDashboardProps> = ({
                     sectionQuestions={sectionQuestions}
                     sectionAnswers={sectionAnswers}
                     destination={selectedDestination}
+                    themeMode='dark'
                   />
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mt-6">
                       {sectionQuestions.map(q => (
@@ -132,6 +141,7 @@ export const StakeholderDashboard: React.FC<StakeholderDashboardProps> = ({
                               goal={goals[q.id] ?? null}
                               timestamp={sectionTimestamps[q.section]}
                               onOpenDetail={() => setSelectedMetric({ q, a: answers[q.id] ?? null })}
+                              themeMode='dark'
                           />
                       ))}
                   </div>

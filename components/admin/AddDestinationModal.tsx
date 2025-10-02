@@ -74,7 +74,7 @@ export const AddDestinationModal: React.FC<AddDestinationModalProps> = ({ isOpen
                     setNewDestination({ id: Date.now(), name, latitude, longitude, zoom: 10 });
                     setActiveStep(1);
                 } else {
-                    setError("Could not find coordinates for that location. Please check the location spelling or be more specific.");
+                    setError("Could not find coordinates. Please check the location spelling or be more specific.");
                 }
             } catch (err) {
                  const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
@@ -128,28 +128,16 @@ export const AddDestinationModal: React.FC<AddDestinationModalProps> = ({ isOpen
         setError('');
         try {
             const firstLetter = newDestination.name.charAt(0).toUpperCase();
-            const prompt = `You are a UI/UX design assistant. For a new destination named "${newDestination.name}", suggest 3-5 vibrant, modern, and visually distinct accent color names that start with the letter "${firstLetter}".
-These colors will be used for buttons, links, and highlights on a dark theme UI (backgrounds are dark slate gray and charcoal).
-The colors must have excellent contrast (WCAG AA accessibility standards or better) against a dark background.
-Provide only common, single-word color names from the following list: Teal, Blue, Red, Orange, Amber, Yellow, Green, Indigo, Purple, Pink.
-
-Return ONLY a JSON object with a single key "colors" containing an array of the suggested color names.`;
-
+            const prompt = `Suggest 3-5 color names that start with the letter "${firstLetter}" and would look good as an accent color on a dark user interface (dark blue/gray background). The colors should have good contrast. Examples: "Teal", "Amber", "Indigo".
+            Return ONLY a JSON object with a single key "colors" containing an array of color names.`;
             const response = await ai.models.generateContent({
                 model: 'gemini-2.5-flash',
                 contents: prompt,
                 config: { responseMimeType: "application/json", responseSchema: { type: Type.OBJECT, properties: { colors: { type: Type.ARRAY, items: { type: Type.STRING } } } } }
             });
             const result = JSON.parse(response.text.trim());
-            
-            const suggestedColorValues = result.colors
-                .map((colorName: string) => {
-                    const themeOption = availableThemes.find(t => t.name.toLowerCase() === colorName.toLowerCase());
-                    return themeOption ? themeOption.value : null;
-                })
-                .filter((value: string | null): value is string => value !== null);
-
-            setSuggestedColors(suggestedColorValues.length > 0 ? suggestedColorValues : ['teal', 'blue', 'orange']);
+            const suggestions = availableThemes.filter(t => result.colors.some((c: string) => t.name.toLowerCase() === c.toLowerCase())).map(t => t.value);
+            setSuggestedColors(suggestions.length > 0 ? suggestions : ['teal', 'blue', 'orange']); // Fallback
         } catch (err) {
             setError("AI color suggestion failed. Please choose manually.");
             setSuggestedColors(['teal', 'blue', 'orange', 'red', 'green']);
@@ -185,9 +173,11 @@ Return ONLY a JSON object with a single key "colors" containing an array of the 
                     <p className="text-sm text-gray-400 mb-4">Select a primary color for the team dashboard, or use AI to suggest colors based on the destination name.</p>
                      <button onClick={handleSuggestColors} disabled={isLoading} className="text-sm bg-gray-600 px-3 py-1 rounded-md mb-4 hover:bg-gray-500">✨ Suggest Colors</button>
                     <div className="flex flex-wrap gap-3">
-                        {availableThemes.filter(t => suggestedColors.includes(t.value)).map(themeOption => (
-                            <button key={themeOption.value} onClick={() => setColor(themeOption.value)} className={`w-10 h-10 rounded-full ring-2 ring-offset-2 ring-offset-gray-800 ${color === themeOption.value ? 'ring-white' : 'ring-transparent'}`} style={{ backgroundColor: themeOption.hex }} />
-                        ))}
+                        {suggestedColors.map(colorName => {
+                            const themeOption = availableThemes.find(t => t.value === colorName);
+                            if (!themeOption) return null;
+                            return <button key={themeOption.value} onClick={() => setColor(themeOption.value)} className={`w-10 h-10 rounded-full ring-2 ring-offset-2 ring-offset-gray-800 ${color === themeOption.value ? 'ring-white' : 'ring-transparent'}`} style={{ backgroundColor: themeOption.hex }} />;
+                        })}
                     </div>
                 </div>
             );

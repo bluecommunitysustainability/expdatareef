@@ -12,10 +12,9 @@ import { questionGstcMapping } from '../../constants/questionGstcMapping';
 
 
 interface FormSidebarContentProps {
+  questions: Question[];
   questionsBySection: Record<string, Question[]>;
   answers: Answers;
-  totalQuestions: number;
-  completedQuestions: number;
   onQuestionSelect: (questionId: string) => void;
 }
 
@@ -31,10 +30,9 @@ const getSectionCompletion = (questions: Question[], answers: Answers) => {
 };
 
 export const FormSidebarContent: React.FC<FormSidebarContentProps> = ({
+  questions,
   questionsBySection,
   answers,
-  totalQuestions,
-  completedQuestions,
   onQuestionSelect
 }) => {
   const theme = useTheme();
@@ -42,7 +40,7 @@ export const FormSidebarContent: React.FC<FormSidebarContentProps> = ({
   return (
     <div className="space-y-4">
       <div className="p-4">
-         <ProgressBar completed={completedQuestions} total={totalQuestions} />
+         <ProgressBar questions={questions} answers={answers} />
       </div>
 
       {/* FIX: Replaced Object.entries with Object.keys to fix TypeScript inference issue where sectionQuestions was typed as `unknown`. */}

@@ -63,13 +63,15 @@ export const scanAnswersForPois = async (answers: Answers, questions: Question[]
 /**
  * Generates a tour route by getting a logical order from AI and then fetching the route from Mapbox.
  */
-export const generateTourRoute = async (selectedPois: Poi[], tourType: 'walking' | 'transit' | 'driving', mapboxToken: string): Promise<Pick<Tour, 'routeGeoJson' | 'poiIds'>> => {
+export const generateTourRoute = async (selectedPois: Poi[], tourType: 'walking' | 'transit', mapboxToken: string): Promise<Pick<Tour, 'routeGeoJson' | 'poiIds'>> => {
     if (selectedPois.length < 2) {
         throw new Error("Please select at least two points to create a tour.");
     }
     
     // Step 1: Ask AI for the optimal order
     const poiList = selectedPois.map(p => `ID: ${p.id}, Name: ${p.name}`).join('\n');
+    const mapboxProfile = tourType === 'walking' ? 'walking' : 'driving';
+    
     const prompt = `You are a tour guide. Given the following points of interest, suggest a logical order for a ${tourType} tour. The tour should be efficient.
     
     Points of Interest:
@@ -101,13 +103,13 @@ export const generateTourRoute = async (selectedPois: Poi[], tourType: 'walking'
     const orderedPois = orderedIds.map(id => selectedPois.find(p => p.id === id)).filter((p): p is Poi => !!p);
 
     // Step 2: Call Mapbox Directions API with the ordered points
-    const mapboxProfile = tourType === 'transit' ? 'walking' : tourType; // Mapbox transit is complex, fallback to walking for now.
     const coordinatesString = orderedPois.map(p => `${p.longitude},${p.latitude}`).join(';');
     const apiUrl = `https://api.mapbox.com/directions/v5/mapbox/${mapboxProfile}/${coordinatesString}?geometries=geojson&access_token=${mapboxToken}`;
 
     const routeResponse = await fetch(apiUrl);
     if (!routeResponse.ok) {
-        throw new Error("Failed to fetch tour route from Mapbox Directions API.");
+        const errorData = await routeResponse.json();
+        throw new Error(errorData.message || "Failed to fetch tour route from Mapbox Directions API.");
     }
     const routeData = await routeResponse.json();
     

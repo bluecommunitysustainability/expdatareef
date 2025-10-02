@@ -3,13 +3,13 @@ import { FormSidebarContent } from './sidebar/FormSidebarContent';
 import { DashboardSidebarContent } from './sidebar/DashboardSidebarContent';
 import { MapSidebarContent } from './sidebar/MapSidebarContent';
 import { StakeholderSidebarContent } from './sidebar/StakeholderSidebarContent';
-import type { AppView, Answers, Question, UserProfile, Metric, SdgDetailInfo, GstcCriterionDetail, BcStrategy, InfoModalData } from '../types';
+import type { AppView, Answers, Question, Poi, Tour, UserProfile, Metric, SdgDetailInfo, GstcCriterionDetail, BcStrategy, InfoModalData } from '../types';
 import { useTheme } from '../context/ThemeContext';
 import SidebarBranding from './sidebar/SidebarBranding';
 import { ExportMenu } from './ExportMenu';
-import { exportToXLSX, exportToJson, exportToCSV } from '../utils/exporters';
+import { exportToXLSX, exportToJson, exportToCSV } from '../../utils/exporters';
 import { GuideModal } from './guide/GuideModal';
-import { availableThemes } from '../constants/teamColors';
+import { availableThemes } from '../../constants/teamColors';
 
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(' ');
@@ -22,16 +22,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
   destination,
   isLoggedIn,
   isAdmin,
+  isMonitorOrAdmin,
   isCollapsed,
   setIsCollapsed,
   onUserClick,
   onAdminClick,
+  onPoiSelect,
   onQuestionSelect,
   userProfile,
   infoHubData,
   setInfoModalData,
+  pois,
+  setPois,
+  tours,
+  setTours,
+  mapboxToken,
   bgImage,
-  onMapLoad,
+  isMapSelectionMode,
+  setIsMapSelectionMode,
+  mapSelectedPoiIds,
+  setMapSelectedPoiIds
 }) => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
@@ -43,7 +53,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return availableThemes.find(t => t.value === theme.name)?.hex || '#374151'; // fallback to gray-700
   }, [theme.name]);
 
-  const { questionsBySection, totalQuestions, completedQuestions } = useMemo(() => {
+  const { questionsBySection } = useMemo(() => {
     const sections: Record<string, Question[]> = {};
     
     questions.forEach(q => {
@@ -53,17 +63,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
       sections[q.section].push(q);
     });
 
-    const completed = questions.filter(q => {
-      const answer = answers[q.id];
-      return answer && answer.value !== null && answer.value !== undefined && answer.value !== '';
-    }).length;
-
     return {
       questionsBySection: sections,
-      totalQuestions: questions.length,
-      completedQuestions: completed
     };
-  }, [questions, answers]);
+  }, [questions]);
 
   const dashboardSections = useMemo(() => {
     return questions.reduce((acc, question) => {
@@ -206,15 +209,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             </svg>
                         </button>
                     )}
-                    <button 
-                        onClick={() => setIsGuideModalOpen(true)} 
-                        className="p-2 rounded-full hover:bg-gray-700/50" 
-                        title="Open Data Collection Guide"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                        </svg>
-                    </button>
+                    {isMonitorOrAdmin && (
+                        <button 
+                            onClick={() => setIsGuideModalOpen(true)} 
+                            className="p-2 rounded-full hover:bg-gray-700/50" 
+                            title="Open Data Collection Guide"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                            </svg>
+                        </button>
+                    )}
                 </div>
             )}
             </div>
@@ -225,14 +230,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     onBack={() => setView('form')} 
                     data={infoHubData}
                     onItemClick={setInfoModalData}
-                    onMapLoad={onMapLoad}
+                    pois={pois}
+                    tours={tours}
+                    mapboxToken={mapboxToken}
                 />
             ) : view === 'form' ? (
                 <FormSidebarContent 
+                questions={questions}
                 questionsBySection={questionsBySection}
                 answers={answers}
-                totalQuestions={totalQuestions}
-                completedQuestions={completedQuestions}
                 onQuestionSelect={onQuestionSelect}
                 />
             ) : view === 'dashboard' ? (
@@ -242,6 +248,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
             ) : (
                 <MapSidebarContent 
                     destination={destination} 
+                    onPoiSelect={onPoiSelect} 
+                    pointsOfInterest={pois}
+                    setTours={setTours}
+                    mapboxToken={mapboxToken}
+                    isAdmin={isAdmin}
+                    isMonitorOrAdmin={isMonitorOrAdmin}
+                    answers={answers}
+                    questions={questions}
+                    setPois={setPois}
+                    isMapSelectionMode={isMapSelectionMode}
+                    setIsMapSelectionMode={setIsMapSelectionMode}
+                    mapSelectedPoiIds={mapSelectedPoiIds}
+                    setMapSelectedPoiIds={setMapSelectedPoiIds}
                 />
             )}
             </div>
@@ -280,10 +299,12 @@ interface SidebarProps {
   destination: string;
   isLoggedIn: boolean;
   isAdmin: boolean;
+  isMonitorOrAdmin: boolean;
   isCollapsed: boolean;
   setIsCollapsed: (isCollapsed: boolean) => void;
   onUserClick: () => void;
   onAdminClick: () => void;
+  onPoiSelect: (poi: Poi) => void;
   onQuestionSelect: (questionId: string) => void;
   userProfile: UserProfile | null;
   infoHubData: {
@@ -293,7 +314,14 @@ interface SidebarProps {
     bc: BcStrategy[];
   } | null;
   setInfoModalData: (data: InfoModalData | null) => void;
+  pois: Poi[];
+  setPois: React.Dispatch<React.SetStateAction<Poi[]>>;
+  tours: Tour[];
+  setTours: React.Dispatch<React.SetStateAction<Tour[]>>;
+  mapboxToken: string;
   bgImage: string;
-  // FIX: Add onMapLoad to the SidebarProps interface to fix type error.
-  onMapLoad: () => void;
+  isMapSelectionMode: boolean;
+  setIsMapSelectionMode: (value: boolean) => void;
+  mapSelectedPoiIds: string[];
+  setMapSelectedPoiIds: React.Dispatch<React.SetStateAction<string[]>>;
 }

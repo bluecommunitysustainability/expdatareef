@@ -23,7 +23,6 @@ export const ProfileSettingsTab: React.FC<ProfileSettingsTabProps> = ({ profile,
         if (file) {
             const reader = new FileReader();
             reader.onloadend = () => {
-                // Use a functional update to prevent stale state issues
                 setProfile(prevProfile => {
                     if (!prevProfile) return null;
                     return { ...prevProfile, avatar: reader.result as string };
