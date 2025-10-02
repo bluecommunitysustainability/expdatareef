@@ -1,4 +1,5 @@
 import type { Poi } from '../types';
+import { parseCsv } from './csvParser';
 
 const fetchCsv = async (url: string) => {
     const response = await fetch(url);
@@ -8,37 +9,8 @@ const fetchCsv = async (url: string) => {
     return response.text();
 }
 
-const parseCsv = (csvText: string): { headers: string[], rows: string[][] } => {
-    const lines = csvText.trim().replace(/\r\n/g, '\n').split('\n');
-    if (lines.length === 0) return { headers: [], rows: [] };
-    const regex = /(?:"([^"]*(?:""[^"]*)*)"|([^,]*))(?:,|$)/g;
-    const parseLine = (line: string): string[] => {
-        const allMatches = Array.from(line.matchAll(regex));
-        const values = allMatches.map(match => {
-            if (match[1] !== undefined) return match[1].replace(/""/g, '"');
-            if (match[2] !== undefined) return match[2];
-            return '';
-        });
-        if (values.length > 0 && values[values.length - 1] === '' && !line.endsWith(',')) {
-            return values.slice(0, -1);
-        }
-        return values;
-    };
-    const headers = parseLine(lines[0]).map(h => h.trim());
-    const rows = lines.slice(1)
-        .filter(line => line.trim() !== '')
-        .map(line => {
-            const parsedRow = parseLine(line).map(cell => cell.trim());
-            while (parsedRow.length < headers.length) {
-                parsedRow.push('');
-            }
-            return parsedRow;
-        });
-    return { headers, rows };
-}
-
 const isValidCategory = (category: string): category is Poi['category'] => {
-    return ['Attraction', 'Park', 'Museum', 'Beach', 'Landmark', 'Shopping'].includes(category);
+    return ['Attraction', 'Park', 'Museum', 'Beach', 'Landmark', 'Shopping', 'AI Suggestion'].includes(category);
 };
 
 export const loadMapData = async (): Promise<Record<string, Poi[]>> => {
@@ -55,7 +27,7 @@ export const loadMapData = async (): Promise<Record<string, Poi[]>> => {
         const descHeader = headers.indexOf('Description');
         const imgHeader = headers.indexOf('Image URL');
 
-        const data = rows.slice(0, 7).reduce((acc, row) => {
+        const data = rows.slice(0, 7).reduce((acc, row, index) => {
             const destination = row[destinationHeader];
             const name = row[nameHeader];
             const latitude = parseFloat(row[latHeader]);
@@ -68,13 +40,17 @@ export const loadMapData = async (): Promise<Record<string, Poi[]>> => {
                 if (!acc[destination]) {
                     acc[destination] = [];
                 }
+                // FIX: Add missing properties to conform to the 'Poi' type.
                 acc[destination].push({
+                    id: `${destination.replace(/\s+/g, '-').toLowerCase()}-${index}`,
                     name,
                     latitude,
                     longitude,
                     category,
                     description,
                     imageUrl: imageUrl || undefined,
+                    status: 'published',
+                    isAiGenerated: false
                 });
             }
             return acc;

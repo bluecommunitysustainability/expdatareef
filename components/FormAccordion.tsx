@@ -26,6 +26,8 @@ interface FormAccordionProps {
   setActiveQuestion: (questionId: string | null) => void;
   setOpenSection: (section: string | null) => void;
   onBulkMergeAnswers: (newAnswers: Answers) => void;
+  isLoggedIn: boolean;
+  isEditable: boolean;
 }
 
 const formatTimestamp = (isoString?: string): string | null => {
@@ -57,7 +59,9 @@ export const FormAccordion: React.FC<FormAccordionProps> = ({
   sectionQuestions,
   setActiveQuestion,
   setOpenSection,
-  onBulkMergeAnswers
+  onBulkMergeAnswers,
+  isLoggedIn,
+  isEditable,
 }) => {
   const theme = useTheme();
   const isComplete = completion.completed === completion.total;
@@ -258,16 +262,33 @@ Your response MUST be ONLY a single, valid JSON object with a single key "result
     }
   };
 
+  const handleToggle = () => {
+    if (isLoggedIn) {
+      onToggle();
+    }
+  };
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-lg overflow-hidden">
       <button
-        onClick={onToggle}
-        className="w-full flex justify-between items-center p-4 text-left hover:bg-gray-700/50 transition-colors focus:outline-none"
-        aria-expanded={isOpen}
+        onClick={handleToggle}
+        className={`w-full flex justify-between items-center p-4 text-left transition-colors focus:outline-none ${!isLoggedIn || !isEditable ? 'cursor-not-allowed' : 'hover:bg-gray-700/50'}`}
+        aria-expanded={isOpen && isLoggedIn}
+        disabled={!isLoggedIn || !isEditable}
+        title={!isLoggedIn ? 'Please log in to access this section' : !isEditable ? 'You do not have permission to edit this section' : section}
       >
-        <div className="flex items-center gap-4">
-            <span className={`text-lg font-bold ${isOpen ? theme.text.primary : 'text-gray-200'}`}>{section}</span>
+        <div className="flex items-center gap-3">
+            {!isLoggedIn && (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-label="Locked">
+                <path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" />
+              </svg>
+            )}
+            {isLoggedIn && !isEditable && (
+                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-yellow-500 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-label="Read-only">
+                    <path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" />
+                </svg>
+            )}
+            <span className={`text-lg font-bold ${isOpen && isLoggedIn && isEditable ? theme.text.primary : 'text-gray-200'}`}>{section}</span>
             <span className={`text-xs font-mono px-2.5 py-1 rounded-full ${isComplete ? `${theme.background.secondary} text-white` : 'bg-gray-600'}`}>
                 {completion.completed}/{completion.total}
             </span>
@@ -275,7 +296,7 @@ Your response MUST be ONLY a single, valid JSON object with a single key "result
         <div className="flex items-center gap-3">
              {displayTime && <span className="text-xs text-gray-500 font-normal hidden sm:block">{displayTime}</span>}
             <svg
-              className={`w-6 h-6 transform transition-transform duration-300 text-gray-400 ${isOpen ? 'rotate-180' : ''}`}
+              className={`w-6 h-6 transform transition-transform duration-300 text-gray-400 ${isOpen && isLoggedIn ? 'rotate-180' : ''}`}
               fill="none" stroke="currentColor" viewBox="0 0 24 24"
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
@@ -283,7 +304,7 @@ Your response MUST be ONLY a single, valid JSON object with a single key "result
         </div>
       </button>
 
-      {isOpen && (
+      {isOpen && isLoggedIn && (
         <div className="px-4 pb-4">
             {isAdmin && (
               <div className={`border-t ${theme.border.primary} pt-4 mb-4 flex justify-end items-center flex-wrap gap-3`}>

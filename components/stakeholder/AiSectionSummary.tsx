@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useMemo } from 'react';
 import type { Answers, Question, AnswerObject, SdgDetailInfo } from '../../types';
 import { ai } from '../../utils/geminiClient';
@@ -14,13 +12,14 @@ interface AiSectionSummaryProps {
   sectionQuestions: Question[];
   sectionAnswers: Answers;
   destination: string;
+  themeMode: 'light' | 'dark';
 }
 
-export const AiSectionSummary: React.FC<AiSectionSummaryProps> = ({ sectionName, sectionQuestions, sectionAnswers, destination }) => {
+export const AiSectionSummary: React.FC<AiSectionSummaryProps> = ({ sectionName, sectionQuestions, sectionAnswers, destination, themeMode }) => {
   const [summary, setSummary] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const theme = useTheme();
+  const appTheme = useTheme();
   
   const answeredCount = Object.keys(sectionAnswers).length;
   const totalCount = sectionQuestions.length;
@@ -115,28 +114,33 @@ export const AiSectionSummary: React.FC<AiSectionSummaryProps> = ({ sectionName,
     return alignments.sort((a, b) => a.sdg.id - b.sdg.id);
   }, [sectionQuestions, sectionAnswers]);
 
+  const bgColor = themeMode === 'dark' ? 'bg-gray-900/50' : 'bg-gray-50/50';
+  const headingColor = themeMode === 'dark' ? 'text-gray-300' : 'text-gray-700';
+  const mutedTextColor = themeMode === 'dark' ? 'text-gray-500' : 'text-gray-500';
 
   return (
-    <div className={`bg-gray-800/10 p-4 rounded-lg border-l-4 border-${theme.name}-500/50 mb-4`}>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8">
-            <div>
-                <h3 className="text-md font-semibold text-gray-700 mb-2">AI Analysis</h3>
-                {isLoading && (
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                    Generating summary...
-                    </div>
-                )}
-                {error && <p className="text-sm text-red-600">{error}</p>}
-                {!isLoading && !error && summary && shouldGenerate && <AiMarkdown text={summary} />}
-                {!isLoading && !error && !shouldGenerate && (
-                    <p className="text-sm text-gray-500 italic">
-                    Analysis will be available when at least 90% of metrics in this section are complete. ({answeredCount}/{totalCount})
-                    </p>
-                )}
+    <div className={`${bgColor} p-4 rounded-lg border-l-4 ${appTheme.border.primary} mb-4`}>
+        <div className="flex flex-col lg:flex-row gap-8">
+            <div className="lg:w-1/2">
+                <h3 className={`text-md font-semibold ${headingColor} mb-2`}>AI Analysis</h3>
+                 <div aria-live="polite">
+                    {isLoading && (
+                        <div className="flex items-center gap-2 text-sm text-gray-400">
+                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        Generating summary...
+                        </div>
+                    )}
+                    {error && <p className="text-sm text-red-500">{error}</p>}
+                    {!isLoading && !error && summary && shouldGenerate && <AiMarkdown text={summary} />}
+                    {!isLoading && !error && !shouldGenerate && (
+                        <p className={`text-sm ${mutedTextColor} italic`}>
+                        Analysis will be available when at least 90% of metrics in this section are complete. ({answeredCount}/{totalCount})
+                        </p>
+                    )}
+                </div>
             </div>
-            <div>
-                <SdgAlignmentVisuals alignments={sdgAlignments} />
+            <div className="lg:w-1/2">
+                <SdgAlignmentVisuals alignments={sdgAlignments} themeMode={themeMode} />
             </div>
         </div>
     </div>

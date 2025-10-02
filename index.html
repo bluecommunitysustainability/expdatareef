@@ -61,6 +61,18 @@
       .animate-fade-in {
         animation: fade-in 0.4s ease-in-out forwards;
       }
+      /* Accessibility class to hide elements visually but keep them for screen readers */
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border-width: 0;
+      }
     </style>
   </head>
   <body class="bg-gray-900">

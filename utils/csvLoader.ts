@@ -1,71 +1,7 @@
 
+
 import type { Metric, BcStrategy } from '../types';
-
-/**
- * A robust CSV parser that correctly handles RFC 4180 standard formatting.
- * @param csvText The raw CSV string.
- * @returns An object containing the headers and the data rows.
- */
-const parseCsv = (csvText: string): { headers: string[], rows: string[][] } => {
-    const lines = csvText.trim().replace(/\r\n/g, '\n').split('\n');
-    if (lines.length === 0) return { headers: [], rows: [] };
-
-    // This regex is designed to handle the complexities of CSV format (RFC 4180).
-    // It captures either a quoted field (handling escaped quotes) or an unquoted field,
-    // followed by a comma or the end of the line.
-    //
-    // Breakdown:
-    // (?:                               // Start of a non-capturing group for the whole field
-    //   "([^"]*(?:""[^"]*)*)"           // 1st alternative: A quoted field.
-    //                                  // - Captures content inside quotes.
-    //                                  // - [^"]*      -> Zero or more characters that are not a double quote.
-    //                                  // - (?:""[^"]*)* -> An escaped double quote (""), followed by more non-quote characters. This can repeat.
-    //   |                            // OR
-    //   ([^,]*)                        // 2nd alternative: An unquoted field.
-    //                                  // - Captures any sequence of characters that are not a comma.
-    // )
-    // (?:,|$)                           // The field is followed by a comma or the end of the line (non-capturing).
-    const regex = /(?:"([^"]*(?:""[^"]*)*)"|([^,]*))(?:,|$)/g;
-
-    const parseLine = (line: string): string[] => {
-        const allMatches = Array.from(line.matchAll(regex));
-        
-        const values = allMatches.map(match => {
-            // Group 1 (match[1]) contains the content of a quoted field.
-            if (match[1] !== undefined) {
-                // Un-escape double quotes ("") back to a single quote (").
-                return match[1].replace(/""/g, '"');
-            }
-            // Group 2 (match[2]) contains the content of an unquoted field.
-            if (match[2] !== undefined) {
-                return match[2];
-            }
-            return '';
-        });
-
-        // The regex can produce an extra empty match if the line doesn't end with a comma.
-        // This logic correctly removes it, ensuring "a,b" results in ['a','b'] not ['a','b',''].
-        if (values.length > 0 && values[values.length - 1] === '' && !line.endsWith(',')) {
-            return values.slice(0, -1);
-        }
-        
-        return values;
-    };
-
-    const headers = parseLine(lines[0]).map(h => h.trim());
-    const rows = lines.slice(1)
-        .filter(line => line.trim() !== '') // Skip empty lines
-        .map(line => {
-            const parsedRow = parseLine(line).map(cell => cell.trim());
-            // Pad row if it has fewer columns than headers (e.g., trailing commas were omitted)
-            while (parsedRow.length < headers.length) {
-                parsedRow.push('');
-            }
-            return parsedRow;
-        });
-    
-    return { headers, rows };
-}
+import { parseCsv } from './csvParser';
 
 
 const fetchCsv = async (url: string) => {

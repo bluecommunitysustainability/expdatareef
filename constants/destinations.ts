@@ -1,3 +1,4 @@
+// constants/destinations.ts
 
 export interface Destination {
   id: number;
@@ -5,6 +6,8 @@ export interface Destination {
   latitude: number;
   longitude: number;
   zoom: number;
+  color?: string;
+  backgroundImage?: string; // base64 data URL for AI-generated image
 }
 
 export const destinationObjects: Destination[] = [

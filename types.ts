@@ -1,5 +1,12 @@
+
+
+// FIX: Removed erroneous circular import of 'Question' type. The type is defined within this file.
+
 // FIX: Removed circular self-import of QuestionType.
 // This file was re-created to define all the necessary types for the application.
+
+// FIX: Centralized AppView type to be used across components.
+export type AppView = 'form' | 'goals' | 'dashboard' | 'map' | 'stakeholder';
 
 // Enum for question types
 export enum QuestionType {
@@ -124,11 +131,24 @@ export interface UserProfile {
   email: string;
   avatar?: string; // base64 data url
   apiKeys: ApiKeys;
-  role?: 'admin' | 'user';
+  role: 'admin' | 'user' | 'Monitor';
   team?: string;
   allowedDestinations?: string[];
   customLogo?: string; // base64 data url for logo
   primaryColor?: string; // e.g., 'teal', 'blue'
+  // FIX: Added activeModel to persist the user's AI model choice from settings.
+  activeModel?: string;
+  editableSections?: string[];
+  fontSize?: 'sm' | 'md' | 'lg';
+
+  // New fields from sheet
+  timestamp?: string;
+  country?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  title?: string;
+  expertise?: string;
 }
 
 // Goals
@@ -142,10 +162,23 @@ export type Goals = Record<string, GoalObject>;
 
 // Map-related types
 export interface Poi {
+    id: string; // Unique identifier
     name: string;
     latitude: number;
     longitude: number;
-    category: 'Attraction' | 'Park' | 'Museum' | 'Beach' | 'Landmark' | 'Shopping';
+    category: 'Attraction' | 'Park' | 'Museum' | 'Beach' | 'Landmark' | 'Shopping' | 'AI Suggestion';
     description: string;
     imageUrl?: string;
+    status: 'staged' | 'published';
+    isAiGenerated: boolean;
+}
+
+export interface Tour {
+    id: string;
+    name: string;
+    description: string;
+    type: 'walking' | 'transit';
+    poiIds: string[];
+    routeGeoJson: any; // GeoJSON LineString geometry
+    status: 'staged' | 'published';
 }

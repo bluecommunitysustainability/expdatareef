@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 
 // Components
@@ -15,11 +16,9 @@ import { ProgressBar } from './components/ProgressBar';
 import { MapView } from './components/MapView';
 import { PoiDetailPanel } from './components/PoiDetailPanel';
 import { DataSyncPanel } from './components/DataSyncPanel';
-import { UserProfilePanel } from './components/UserProfilePanel';
 import { StakeholderDashboard } from './components/stakeholder/StakeholderDashboard';
 import { ExplanationPage } from './components/ExplanationPage';
 import { AdminDashboard } from './components/admin/AdminDashboard';
-// FIX: Renamed Goals component to GoalsView to avoid naming conflict with the Goals type.
 import { GoalsView } from './components/Goals';
 
 
@@ -30,15 +29,13 @@ import { questions } from './constants/questions';
 import { gstcCriteria } from './constants/gstcCriteria';
 import { sdgDetails } from './constants/sdgDetails';
 import { bcStrategies } from './constants/bcStrategies';
+import { stakeholderBackgroundImages } from './constants/stakeholderImages';
 import { saveDataToDb, loadDataFromDb, saveUserProfile, loadUserProfile } from './utils/database';
 import { getCurrentUserEmail, setCurrentUserEmail } from './utils/session';
-import { checkSheetForAnswers } from './utils/sheetLoader';
 import { loadAllCsvData } from './utils/csvLoader';
-import { loadMapData } from './utils/mapLoader';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
-import type { Answers, AiContact, InfoModalData, Metric, BcStrategy, ApiKeys, SdgDetailInfo, Poi, GstcCriterionDetail, AnswerObject, SectionTimestamps, UserProfile, Goals, GoalObject } from './types';
-
-type AppView = 'form' | 'goals' | 'dashboard' | 'map' | 'stakeholder';
+import type { AppView, Answers, AiContact, InfoModalData, Metric, BcStrategy, ApiKeys, SdgDetailInfo, Poi, Tour, GstcCriterionDetail, AnswerObject, SectionTimestamps, UserProfile, Goals, GoalObject } from './types';
+import { seedInitialUsers, seedMonitorsForDestination } from './utils/seedUsers';
 
 const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & { 
   destination: string,
@@ -52,18 +49,20 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
   aiContacts,
   sectionTimestamps,
   goals,
+  pois,
+  tours,
   setAnswers,
   setAiContacts,
   setSectionTimestamps,
   setGoals,
+  setPois,
+  setTours,
   handleChangeDestination,
   apiKeys,
-  setApiKeys,
   userProfile,
   handleLogin,
   handleLogout,
   handleUpdateProfile,
-  handleSaveSettings,
   handleBulkMergeAnswers,
   isAdmin,
   startInStakeholderView,
@@ -82,7 +81,6 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
     bc: BcStrategy[];
   } | null>(null);
   const [selectedPoi, setSelectedPoi] = useState<Poi | null>(null);
-  const [mapData, setMapData] = useState<Record<string, Poi[]>>({});
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [openSection, setOpenSection] = useState<string | null>(null);
   const [activeQuestion, setActiveQuestion] = useState<string | null>(null);
@@ -90,33 +88,47 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
 
   // Auth and Settings State
   const [isAuthPanelOpen, setIsAuthPanelOpen] = useState(false);
-  const [isProfilePanelOpen, setIsProfilePanelOpen] = useState(false);
   const [isSettingsPanelOpen, setIsSettingsPanelOpen] = useState(false);
   const [isDataSyncPanelOpen, setIsDataSyncPanelOpen] = useState(false);
   const [isAdminDashboardOpen, setIsAdminDashboardOpen] = useState(false);
-  const [selectedApiModel, setSelectedApiModel] = useState('gemini');
   
   const theme = useTheme();
   const debounceTimeoutRef = useRef<number | null>(null);
   
+  const selectedDestinationObject = useMemo(() => 
+    allDestinations.find(d => d.name === destination), 
+    [allDestinations, destination]
+  );
+  
+  const bgImage = useMemo(() => selectedDestinationObject?.backgroundImage || stakeholderBackgroundImages[destination] || stakeholderBackgroundImages['default'], [destination, selectedDestinationObject]);
+
   useEffect(() => {
-    // Automatically collapse the sidebar after a delay to give users a chance to see it.
     const timer = setTimeout(() => {
         setIsSidebarCollapsed(true);
-    }, 8000); // 8 seconds
+    }, 8000); 
 
-    return () => clearTimeout(timer); // Cleanup on unmount
-  }, []); // Run only once on mount
+    return () => clearTimeout(timer);
+  }, []);
 
   const isLoggedIn = !!userProfile;
 
+  const handleAddNewDestination = async (newDestination: Destination) => {
+    onDestinationsUpdate(prev => {
+        const exists = prev.some(d => d.name.toLowerCase() === newDestination.name.toLowerCase());
+        if (exists) {
+            alert(`Destination "${newDestination.name}" already exists.`);
+            return prev;
+        }
+        return [...prev, newDestination];
+    });
+    await seedMonitorsForDestination(newDestination);
+  };
+
   useEffect(() => {
     if (startInStakeholderView) {
-        // Explicitly close panels when starting directly in stakeholder view
         setIsDataSyncPanelOpen(false);
         setIsAdminDashboardOpen(false);
         setIsSettingsPanelOpen(false);
-        setIsProfilePanelOpen(false);
         setIsAuthPanelOpen(false);
         setIsInfoSidebarOpen(false);
         setSelectedPoi(null);
@@ -125,16 +137,10 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
   }, [startInStakeholderView, onInitialViewRendered]);
 
   useEffect(() => {
-    // When the user's login status changes, manage the auth panels.
     if (isLoggedIn && isAuthPanelOpen) {
-      // If user has logged in, close the auth panel.
       setIsAuthPanelOpen(false);
     }
-    if (!isLoggedIn && isProfilePanelOpen) {
-      // If user has logged out, close the profile panel.
-      setIsProfilePanelOpen(false);
-    }
-  }, [isLoggedIn, isAuthPanelOpen, isProfilePanelOpen]);
+  }, [isLoggedIn, isAuthPanelOpen]);
 
   const saveProgress = async () => {
     if (saveStatus === 'saving') return;
@@ -148,9 +154,8 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
     }
   };
 
-  // Debounced autosave effect
   useEffect(() => {
-    if (Object.keys(answers).length === 0) return; // Don't save empty initial state
+    if (Object.keys(answers).length === 0) return;
 
     if (debounceTimeoutRef.current) {
         clearTimeout(debounceTimeoutRef.current);
@@ -158,7 +163,7 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
     
     debounceTimeoutRef.current = window.setTimeout(() => {
         saveProgress();
-    }, 2000); // 2-second debounce
+    }, 2000);
 
     return () => {
         if (debounceTimeoutRef.current) {
@@ -167,7 +172,6 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
     };
   }, [answers, destination, sectionTimestamps]);
 
-  // Effect to reset status indicator
   useEffect(() => {
     if (saveStatus === 'saved' || saveStatus === 'error') {
         const timer = setTimeout(() => setSaveStatus('idle'), 3000);
@@ -177,7 +181,6 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
 
   
   useEffect(() => {
-    // When a new destination is selected, reset all transient UI states.
     setIsDataSyncPanelOpen(false); 
     setOpenSection(null);
   }, [destination]);
@@ -188,10 +191,6 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
         setInfoHubData({ ...csvData, gstc: gstcCriteria, sdgs: sdgDetails, bc: bcStrategies });
       })
       .catch(error => console.error("Failed to load Info Hub data:", error));
-    
-    loadMapData()
-      .then(setMapData)
-      .catch(error => console.error("Failed to load map POI data:", error));
   }, []);
 
   useEffect(() => {
@@ -255,11 +254,9 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
   };
 
   const handleViewChange = (newView: AppView) => {
-    // Bug Fix: Close all panels when changing main view to prevent them from getting stuck.
     setIsDataSyncPanelOpen(false);
     setIsAdminDashboardOpen(false);
     setIsSettingsPanelOpen(false);
-    setIsProfilePanelOpen(false);
     setIsAuthPanelOpen(false);
     setIsInfoSidebarOpen(false);
     setSelectedPoi(null);
@@ -279,18 +276,30 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
         isAdmin={isAdmin}
         isCollapsed={isSidebarCollapsed}
         setIsCollapsed={setIsSidebarCollapsed}
-        onUserClick={() => isLoggedIn ? setIsProfilePanelOpen(true) : setIsAuthPanelOpen(true)}
-        onSettingsClick={() => setIsSettingsPanelOpen(true)}
+        onUserClick={() => setIsAuthPanelOpen(true)}
+        onAdminClick={() => setIsAdminDashboardOpen(true)}
         onPoiSelect={setSelectedPoi}
-        mapPois={mapData[destination] || []}
         onQuestionSelect={handleSidebarQuestionSelect}
         userProfile={userProfile}
         infoHubData={infoHubData}
         setInfoModalData={setInfoModalData}
+        pois={pois}
+        setPois={setPois}
+        tours={tours}
+        setTours={setTours}
+        mapboxToken={apiKeys.mapbox}
+        bgImage={bgImage}
       />
-      <div className={`min-w-0 transition-all duration-300 ease-in-out min-h-screen ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-96'}`}>
+      <div className={`min-w-0 transition-all duration-300 ease-in-out min-h-screen ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-96'} relative`}>
+        {isSidebarCollapsed && view !== 'stakeholder' && (
+            <>
+                <div className="absolute inset-0 z-0 bg-cover bg-center" style={{ backgroundImage: `url(${bgImage})` }} />
+                <div className="absolute inset-0 z-0 bg-gray-900/80 backdrop-blur-sm" />
+            </>
+        )}
+       <div className="relative z-10 flex flex-col min-h-screen">
        {view !== 'stakeholder' && (
-        <header className="bg-gray-800/80 backdrop-blur-sm sticky top-0 z-20 flex items-center justify-between p-4 border-b border-gray-600 flex-wrap gap-4">
+        <header className="bg-gray-800/80 backdrop-blur-sm sticky top-0 z-20 flex items-center justify-between p-4 border-b-2 border-gray-700/60 flex-wrap gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-4">
                {userProfile?.customLogo ? (
@@ -320,6 +329,18 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
             <SaveButton onSave={handleSave} onLoad={handleLoad} saveStatus={saveStatus} />
             <CheckSheetButton onClick={() => setIsDataSyncPanelOpen(true)} />
 
+            {isLoggedIn && (
+              <button 
+                onClick={() => setIsSettingsPanelOpen(true)}
+                className="p-2 text-sm font-medium text-white bg-gray-600 hover:bg-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-gray-500" 
+                title="Settings"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-1.57 1.996A1.532 1.532 0 013.17 7.49c-1.56.38-1.56 2.6 0 2.98a1.532 1.532 0 01.948 2.286c-.836 1.372.734 2.942 1.996 1.57a1.532 1.532 0 012.286.948c.38 1.56 2.6 1.56 2.98 0a1.532 1.532 0 012.286-.948c1.372.836 2.942-.734-1.57-1.996A1.532 1.532 0 0116.83 12.51c1.56-.38 1.56-2.6 0-2.98a1.532 1.532 0 01-.948-2.286c.836-1.372-.734-2.942-1.996-1.57a1.532 1.532 0 01-2.286-.948zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                </svg>
+              </button>
+            )}
+
             {isAdmin && (
                 <button 
                   onClick={() => setIsAdminDashboardOpen(true)} 
@@ -327,13 +348,15 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
                   title="Admin Dashboard"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-1.57 1.996A1.532 1.532 0 013.17 7.49c-1.56.38-1.56 2.6 0 2.98a1.532 1.532 0 01.948 2.286c-.836 1.372.734 2.942 1.996 1.57a1.532 1.532 0 012.286.948c.38 1.56 2.6 1.56 2.98 0a1.532 1.532 0 012.286-.948c1.372.836 2.942-.734-1.57-1.996A1.532 1.532 0 0116.83 12.51c1.56-.38 1.56-2.6 0-2.98a1.532 1.532 0 01-.948-2.286c.836-1.372-.734-2.942-1.996-1.57a1.532 1.532 0 01-2.286-.948zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                        <path d="M10 3.5a1.5 1.5 0 013 0V4a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0V9.5a1.5 1.5 0 01-3 0V8a1 1 0 01-1-1V5a1 1 0 011-1h3.5a1.5 1.5 0 010-3zM3 14a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" />
                     </svg>
                 </button>
             )}
             
             <button onClick={() => setIsInfoSidebarOpen(true)} className="p-2 text-sm font-medium text-white bg-gray-600 hover:bg-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-gray-500" title="Open Info Hub">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2h-2zM11 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2h-2z" />
+                </svg>
             </button>
           </div>
         </header>
@@ -355,6 +378,8 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
               sectionTimestamps={sectionTimestamps}
               isAdmin={isAdmin}
               onBulkMergeAnswers={handleBulkMergeAnswers}
+              isLoggedIn={isLoggedIn}
+              userProfile={userProfile}
             />
           ) : view === 'goals' ? (
             <GoalsView 
@@ -376,8 +401,10 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
             <MapView 
               destination={destination} 
               onPoiSelect={setSelectedPoi} 
-              pois={mapData[destination] || []}
+              pois={pois}
+              setPois={setPois}
               mapboxToken={apiKeys.mapbox}
+              tours={tours}
             />
           ) : (
              <StakeholderDashboard 
@@ -388,9 +415,14 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
                 onDestinationChange={(dest) => {
                   handleChangeDestination();
                 }}
+                goals={goals}
+                pois={pois}
+                tours={tours}
+                mapboxToken={apiKeys.mapbox}
              />
           )}
         </main>
+      </div>
       </div>
 
       {infoHubData && (
@@ -416,21 +448,11 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
         onClose={() => setIsAuthPanelOpen(false)}
         onLogin={handleLogin}
       />
-      <UserProfilePanel
-        isOpen={isProfilePanelOpen}
-        onClose={() => setIsProfilePanelOpen(false)}
-        userProfile={userProfile}
-        onUpdateProfile={handleUpdateProfile}
-        onLogout={handleLogout}
-      />
        <SettingsPanel
         isOpen={isSettingsPanelOpen}
         onClose={() => setIsSettingsPanelOpen(false)}
-        onSave={(settings) => handleSaveSettings(settings.keys, settings.model, settings.logo, settings.color)}
-        currentKeys={apiKeys}
-        currentModel={selectedApiModel}
-        currentLogo={userProfile?.customLogo}
-        currentColor={userProfile?.primaryColor}
+        userProfile={userProfile}
+        onUpdateProfile={handleUpdateProfile}
       />
        {isLoggedIn && (
         <DataSyncPanel
@@ -447,7 +469,12 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
             isOpen={isAdminDashboardOpen}
             onClose={() => setIsAdminDashboardOpen(false)}
             destinations={allDestinations}
+// FIX: The `onDestinationsUpdate` prop was passed `setAllDestinations`, which is not defined in the scope of `MainLayout`. The correct prop to pass is `onDestinationsUpdate`.
             onDestinationsUpdate={onDestinationsUpdate}
+            onAddNewDestination={handleAddNewDestination}
+            questions={questions}
+            mapboxToken={apiKeys.mapbox}
+            apiKeys={apiKeys}
         />
        )}
     </div>
@@ -461,17 +488,19 @@ interface AppProps {
   apiKeys: ApiKeys;
   sectionTimestamps: SectionTimestamps;
   goals: Goals;
+  pois: Poi[];
+  tours: Tour[];
   setAnswers: React.Dispatch<React.SetStateAction<Answers>>;
   setAiContacts: React.Dispatch<React.SetStateAction<Record<string, AiContact[]>>>;
-  setApiKeys: React.Dispatch<React.SetStateAction<ApiKeys>>;
   setSectionTimestamps: React.Dispatch<React.SetStateAction<SectionTimestamps>>;
   setGoals: React.Dispatch<React.SetStateAction<Goals>>;
+  setPois: React.Dispatch<React.SetStateAction<Poi[]>>;
+  setTours: React.Dispatch<React.SetStateAction<Tour[]>>;
   handleChangeDestination: () => void;
   userProfile: UserProfile | null;
   handleLogin: (email: string) => Promise<void>;
   handleLogout: () => void;
   handleUpdateProfile: (profile: UserProfile) => Promise<void>;
-  handleSaveSettings: (keys: ApiKeys, model: string, logo?: string | null, color?: string) => Promise<void>;
   handleBulkMergeAnswers: (newAnswers: Answers) => void;
   isAdmin: boolean;
   startInStakeholderView: boolean;
@@ -494,7 +523,12 @@ function App() {
   const goalsKey = useMemo(() => `goals_${selectedDestination || 'none'}`, [selectedDestination]);
   const [goals, setGoals] = useLocalStorage<Goals>(goalsKey, {});
 
-  // FIX: Corrected the dependency array for useMemo. The key should depend on the destination, not the contacts themselves.
+  const poisKey = useMemo(() => `pois_${selectedDestination || 'none'}`, [selectedDestination]);
+  const [pois, setPois] = useLocalStorage<Poi[]>(poisKey, []);
+
+  const toursKey = useMemo(() => `tours_${selectedDestination || 'none'}`, [selectedDestination]);
+  const [tours, setTours] = useLocalStorage<Tour[]>(toursKey, []);
+
   const aiContactsKey = useMemo(() => `aiContacts_${selectedDestination || 'none'}`, [selectedDestination]);
   const [aiContacts, setAiContacts] = useLocalStorage<Record<string, AiContact[]>>(aiContactsKey, {});
   
@@ -502,17 +536,31 @@ function App() {
 
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isAuthPanelOpen, setIsAuthPanelOpen] = useState(false);
-  const [isProfilePanelOpen, setIsProfilePanelOpen] = useState(false);
   const isAdmin = userProfile?.role === 'admin';
 
   const [startInStakeholderView, setStartInStakeholderView] = useState(false);
   const [landingView, setLandingView] = useState<'selector' | 'explanation'>('selector');
   const lastDestinationFromStorage = JSON.parse(localStorage.getItem('lastSelectedDestination') || '""');
+  const [landingBg, setLandingBg] = useState<{ image: string; name: string } | null>(null);
 
 
-  // Session restoration effect
   useEffect(() => {
-    const checkSession = async () => {
+    const images = allDestinations
+        .map(d => ({ name: d.name, image: d.backgroundImage || stakeholderBackgroundImages[d.name] }))
+        .filter(item => item.image && item.image !== stakeholderBackgroundImages['default']);
+
+    if (images.length > 0) {
+        const randomIndex = Math.floor(Math.random() * images.length);
+        setLandingBg(images[randomIndex]);
+    } else {
+        setLandingBg({ name: 'Welcome', image: stakeholderBackgroundImages['default']});
+    }
+}, [allDestinations]);
+
+  // Session restoration and user seeding effect
+  useEffect(() => {
+    const initializeApp = async () => {
+        await seedInitialUsers(); // Seed users on first load
         const userEmail = getCurrentUserEmail();
         if (userEmail) {
             const profile = await loadUserProfile(userEmail);
@@ -524,8 +572,15 @@ function App() {
             }
         }
     };
-    checkSession();
+    initializeApp();
   }, []);
+
+  // Effect to apply font size changes globally
+  useEffect(() => {
+    const size = userProfile?.fontSize || 'md';
+    const html = document.documentElement;
+    html.style.fontSize = size === 'sm' ? '14px' : size === 'lg' ? '18px' : '16px';
+  }, [userProfile?.fontSize]);
 
   const isLoggedIn = !!userProfile;
   const userAvatar = userProfile?.avatar || (userProfile ? `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile.name || userProfile.email)}&background=4b5563&color=e2e8f0&size=96` : undefined);
@@ -534,22 +589,23 @@ function App() {
     if (isLoggedIn && isAuthPanelOpen) {
       setIsAuthPanelOpen(false);
     }
-    if (!isLoggedIn && isProfilePanelOpen) {
-      setIsProfilePanelOpen(false);
-    }
-  }, [isLoggedIn, isAuthPanelOpen, isProfilePanelOpen]);
+  }, [isLoggedIn, isAuthPanelOpen]);
 
 
   const handleLogin = async (email: string) => {
     try {
       let profile = await loadUserProfile(email);
       if (!profile) {
+          // If a user doesn't exist, we create a basic profile.
+          // More detailed profiles (like Monitors) are created via seeding or the admin panel.
           const newProfile: UserProfile = {
               id: email,
               email,
               name: email.split('@')[0],
               apiKeys: { gemini: '', openai: '', claude: '', mapbox: '' },
-              role: email.toLowerCase() === 'admin@datareef.com' ? 'admin' : 'user',
+              role: 'user', 
+              activeModel: 'gemini',
+              fontSize: 'md',
           };
           await saveUserProfile(newProfile);
           profile = newProfile;
@@ -573,22 +629,8 @@ function App() {
   const handleUpdateProfile = async (updatedProfile: UserProfile) => {
       await saveUserProfile(updatedProfile);
       setUserProfile(updatedProfile);
-      alert('Profile updated!');
-  };
-
-  const handleSaveSettings = async (keys: ApiKeys, model: string, logo?: string | null, color?: string) => {
-      setApiKeys(keys);
-      if (userProfile) {
-          const updatedProfile = { 
-              ...userProfile, 
-              apiKeys: keys, 
-              customLogo: logo === null ? undefined : logo || userProfile.customLogo,
-              primaryColor: color || userProfile.primaryColor
-          };
-          await saveUserProfile(updatedProfile);
-          setUserProfile(updatedProfile);
-      }
-      alert("Settings saved.");
+      setApiKeys(updatedProfile.apiKeys);
+      alert('Settings updated!');
   };
 
   const handleDestinationSelect = (destination: string) => {
@@ -623,35 +665,46 @@ function App() {
     setSectionTimestamps(prev => ({...prev, ...newTimestamps}));
     setAnswers(prev => ({...prev, ...newAnswers}));
   };
+  
+  const selectedDestinationObject = useMemo(() => 
+    allDestinations.find(d => d.name === selectedDestination), 
+    [allDestinations, selectedDestination]
+  );
+
+  const primaryColor = userProfile?.primaryColor || selectedDestinationObject?.color;
+
 
   if (!selectedDestination) {
     return (
       <div 
         className="min-h-screen text-white flex flex-col items-center justify-center p-4 relative bg-cover bg-center"
-        style={{ backgroundImage: 'url(https://storage.ning.com/topology/rest/1.0/file/get/13715201495?profile=original)' }}
+        style={{ backgroundImage: `url(${landingBg?.image || 'https://storage.ning.com/topology/rest/1.0/file/get/13715201495?profile=original'})` }}
       >
         <div className="absolute inset-0 bg-gray-900 bg-opacity-70"></div>
 
         <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
-            <button
-                onClick={() => {
-                    if (lastDestinationFromStorage) {
-                        setStartInStakeholderView(true);
-                        handleDestinationSelect(lastDestinationFromStorage);
-                    } else {
-                        setLandingView('explanation');
-                    }
-                }}
-                className="p-1 rounded-full hover:bg-gray-700/50"
-                title={lastDestinationFromStorage ? `Go to ${lastDestinationFromStorage} Dashboard` : "About the Assessment"}
-            >
-                <div className="h-8 w-8 rounded-full bg-gray-700 flex items-center justify-center">
-                   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                   </svg>
-                </div>
-            </button>
-            <button onClick={() => isLoggedIn ? setIsProfilePanelOpen(true) : setIsAuthPanelOpen(true)} className="p-1 rounded-full hover:bg-gray-700/50" title="User Account">
+            <div className="flex items-center gap-2 bg-gray-800/50 backdrop-blur-sm p-1 pr-3 rounded-full">
+                <button
+                    onClick={() => {
+                        if (lastDestinationFromStorage) {
+                            setStartInStakeholderView(true);
+                            handleDestinationSelect(lastDestinationFromStorage);
+                        } else {
+                            setLandingView('explanation');
+                        }
+                    }}
+                    className="p-1 rounded-full hover:bg-gray-700/50"
+                    title={lastDestinationFromStorage ? `Go to ${lastDestinationFromStorage} Dashboard` : "About the Assessment"}
+                >
+                    <div className="h-8 w-8 rounded-full bg-gray-700 flex items-center justify-center">
+                       <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                       </svg>
+                    </div>
+                </button>
+                {landingBg && <span className="text-sm font-semibold text-gray-300">{landingBg.name}</span>}
+            </div>
+            <button onClick={() => setIsAuthPanelOpen(true)} className="p-1 rounded-full hover:bg-gray-700/50 bg-gray-800/50 backdrop-blur-sm" title="User Account">
                 {isLoggedIn && userAvatar ? (
                     <img src={userAvatar} alt="User Avatar" className="h-8 w-8 rounded-full object-cover" />
                 ) : (
@@ -666,7 +719,8 @@ function App() {
             <div className="relative z-10 w-full max-w-lg bg-gray-800/80 backdrop-blur-sm p-8 rounded-lg shadow-2xl text-center">
               <img src="https://labs.landsurveyorsunited.com/datareef/icons/web/android-chrome-192x192.png" alt="DataReef Logo" className="mx-auto h-64 w-auto mb-4" />
               <h1 className="text-3xl font-bold text-teal-400 mb-2">DataReef Observatory</h1>
-              <p className="text-gray-400 mb-6">Because without the data there will soon be no reef.</p>
+              <p className="text-gray-400 mb-2">Because without the data there will soon be no reef.</p>
+              <p className="text-gray-400 text-sm mb-6 italic">Human Sourced Data with AI insights for a more Sustainable Tourism Impact.</p>
               <DestinationSelector 
                 destinations={destinationNames}
                 selectedDestination={selectedDestination}
@@ -685,23 +739,12 @@ function App() {
             setIsAuthPanelOpen(false);
           }}
         />
-
-        {userProfile && <UserProfilePanel
-          isOpen={isProfilePanelOpen}
-          onClose={() => setIsProfilePanelOpen(false)}
-          userProfile={userProfile}
-          onUpdateProfile={handleUpdateProfile}
-          onLogout={() => {
-            handleLogout();
-            setIsProfilePanelOpen(false);
-          }}
-        />}
       </div>
     );
   }
 
   return (
-    <ThemeProvider destination={selectedDestination} primaryColor={userProfile?.primaryColor}>
+    <ThemeProvider destination={selectedDestination} primaryColor={primaryColor}>
       <MainLayout 
         destination={selectedDestination}
         answers={answers}
@@ -709,17 +752,19 @@ function App() {
         apiKeys={apiKeys}
         sectionTimestamps={sectionTimestamps}
         goals={goals}
+        pois={pois}
+        tours={tours}
         setAnswers={setAnswers}
         setAiContacts={setAiContacts}
-        setApiKeys={setApiKeys}
         setSectionTimestamps={setSectionTimestamps}
         setGoals={setGoals}
+        setPois={setPois}
+        setTours={setTours}
         handleChangeDestination={handleChangeDestination}
         userProfile={userProfile}
         handleLogin={handleLogin}
         handleLogout={handleLogout}
         handleUpdateProfile={handleUpdateProfile}
-        handleSaveSettings={handleSaveSettings}
         handleBulkMergeAnswers={handleBulkMergeAnswers}
         isAdmin={isAdmin}
         startInStakeholderView={startInStakeholderView}

@@ -3,41 +3,14 @@ import { FormSidebarContent } from './sidebar/FormSidebarContent';
 import { DashboardSidebarContent } from './sidebar/DashboardSidebarContent';
 import { MapSidebarContent } from './sidebar/MapSidebarContent';
 import { StakeholderSidebarContent } from './sidebar/StakeholderSidebarContent';
-import type { Answers, Question, Poi, UserProfile, Metric, SdgDetailInfo, GstcCriterionDetail, BcStrategy, InfoModalData } from '../types';
+import type { AppView, Answers, Question, Poi, Tour, UserProfile, Metric, SdgDetailInfo, GstcCriterionDetail, BcStrategy, InfoModalData } from '../types';
 import { useTheme } from '../context/ThemeContext';
 import SidebarBranding from './sidebar/SidebarBranding';
-import { stakeholderBackgroundImages } from '../constants/stakeholderImages';
 import { ExportMenu } from './ExportMenu';
-import { exportToXLSX, exportToJson, exportToCSV } from '../utils/exporters';
+import { exportToXLSX, exportToJson, exportToCSV } from '../../utils/exporters';
 import { GuideModal } from './guide/GuideModal';
+import { availableThemes } from '../../constants/teamColors';
 
-
-type AppView = 'form' | 'dashboard' | 'map' | 'stakeholder';
-
-interface SidebarProps {
-  view: AppView;
-  setView: (view: AppView) => void;
-  questions: Question[];
-  answers: Answers;
-  destination: string;
-  isLoggedIn: boolean;
-  isAdmin: boolean;
-  isCollapsed: boolean;
-  setIsCollapsed: (isCollapsed: boolean) => void;
-  onUserClick: () => void;
-  onSettingsClick: () => void;
-  onPoiSelect: (poi: Poi) => void;
-  onQuestionSelect: (questionId: string) => void;
-  mapPois: Poi[];
-  userProfile: UserProfile | null;
-  infoHubData: {
-    metrics: Metric[];
-    sdgs: SdgDetailInfo[];
-    gstc: GstcCriterionDetail[];
-    bc: BcStrategy[];
-  } | null;
-  setInfoModalData: (data: InfoModalData | null) => void;
-}
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(' ');
 
@@ -52,19 +25,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isCollapsed,
   setIsCollapsed,
   onUserClick,
-  onSettingsClick,
+  onAdminClick,
   onPoiSelect,
   onQuestionSelect,
-  mapPois,
   userProfile,
   infoHubData,
-  setInfoModalData
+  setInfoModalData,
+  pois,
+  setPois,
+  tours,
+  setTours,
+  mapboxToken,
+  bgImage
 }) => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
   const exportButtonRef = useRef<HTMLButtonElement>(null);
   const theme = useTheme();
+
+  const themeColorHex = useMemo(() => {
+    return availableThemes.find(t => t.value === theme.name)?.hex || '#374151'; // fallback to gray-700
+  }, [theme.name]);
 
   const { questionsBySection, totalQuestions, completedQuestions } = useMemo(() => {
     const sections: Record<string, Question[]> = {};
@@ -97,7 +79,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const userAvatar = userProfile?.avatar || (userProfile ? `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile.name)}&background=4b5563&color=e2e8f0&size=96` : undefined);
   
-  const bgImage = stakeholderBackgroundImages[destination] || stakeholderBackgroundImages['default'];
 
   return (
     <>
@@ -126,12 +107,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         <div className="relative z-10 flex flex-col h-full">
             {isCollapsed && <SidebarBranding />}
+            
+            {isCollapsed && !isMobileOpen && (
+                <button
+                    onClick={() => setView('stakeholder')}
+                    className={cn(
+                        'absolute top-24 left-0 w-6 flex items-center justify-center text-center tracking-wide text-gray-300 hover:text-white transition-colors',
+                        view === 'stakeholder' && `font-bold ${theme.text.primary}`
+                    )}
+                    style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: '1.1em' }}
+                    title="Go to Stakeholder Dashboard"
+                >
+                    Stakeholders
+                </button>
+            )}
+
 
             {isCollapsed && !isMobileOpen && (
                 <button 
                     onClick={() => setIsCollapsed(false)} 
-                    className="absolute top-1/2 -right-4 transform -translate-y-1/2 z-50 w-8 h-16 bg-gray-700/80 backdrop-blur-sm rounded-r-lg flex items-center justify-center text-gray-300 hover:bg-gray-600 hover:text-white transition-all opacity-0 animate-fade-in"
-                    style={{ animationDelay: '300ms' }}
+                    className="absolute top-1/2 -right-4 transform -translate-y-1/2 z-50 w-8 h-16 rounded-r-lg flex items-center justify-center text-gray-300 hover:text-white transition-all opacity-0 animate-fade-in"
+                    style={{ 
+                        animationDelay: '300ms',
+                        backgroundColor: `${themeColorHex}BF` // BF is ~75% opacity
+                    }}
                     title="Expand Sidebar"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -166,9 +165,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </button>
                 {isLoggedIn && (
                 <>
-                    <button onClick={onSettingsClick} className="p-2 rounded-full hover:bg-gray-700/50" title="Settings">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0 3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                    </button>
                     <div className="relative">
                         <button
                             ref={exportButtonRef}
@@ -203,7 +199,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 )}
             </div>
              {isCollapsed && (
-                <div className="mt-auto">
+                <div className="mt-auto flex flex-col items-center gap-2">
+                    {isAdmin && (
+                        <button 
+                            onClick={onAdminClick} 
+                            className="p-2 rounded-full hover:bg-gray-700/50" 
+                            title="Admin Dashboard"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M10 3.5a1.5 1.5 0 013 0V4a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0V9.5a1.5 1.5 0 01-3 0V8a1 1 0 01-1-1V5a1 1 0 011-1h3.5a1.5 1.5 0 010-3zM3 14a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" />
+                            </svg>
+                        </button>
+                    )}
                     <button 
                         onClick={() => setIsGuideModalOpen(true)} 
                         className="p-2 rounded-full hover:bg-gray-700/50" 
@@ -223,6 +230,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     onBack={() => setView('form')} 
                     data={infoHubData}
                     onItemClick={setInfoModalData}
+                    pois={pois}
+                    tours={tours}
+                    mapboxToken={mapboxToken}
                 />
             ) : view === 'form' ? (
                 <FormSidebarContent 
@@ -237,7 +247,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 questionsBySection={dashboardSections}
                 />
             ) : (
-                <MapSidebarContent destination={destination} onPoiSelect={onPoiSelect} pointsOfInterest={mapPois} />
+                <MapSidebarContent 
+                    destination={destination} 
+                    onPoiSelect={onPoiSelect} 
+                    pointsOfInterest={pois}
+                    setTours={setTours}
+                    mapboxToken={mapboxToken}
+                    isAdmin={isAdmin}
+                />
             )}
             </div>
             
@@ -266,3 +283,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
     </>
   );
 };
+
+interface SidebarProps {
+  view: AppView;
+  setView: (view: AppView) => void;
+  questions: Question[];
+  answers: Answers;
+  destination: string;
+  isLoggedIn: boolean;
+  isAdmin: boolean;
+  isCollapsed: boolean;
+  setIsCollapsed: (isCollapsed: boolean) => void;
+  onUserClick: () => void;
+  onAdminClick: () => void;
+  onPoiSelect: (poi: Poi) => void;
+  onQuestionSelect: (questionId: string) => void;
+  userProfile: UserProfile | null;
+  infoHubData: {
+    metrics: Metric[];
+    sdgs: SdgDetailInfo[];
+    gstc: GstcCriterionDetail[];
+    bc: BcStrategy[];
+  } | null;
+  setInfoModalData: (data: InfoModalData | null) => void;
+  pois: Poi[];
+  setPois: React.Dispatch<React.SetStateAction<Poi[]>>;
+  tours: Tour[];
+  setTours: React.Dispatch<React.SetStateAction<Tour[]>>;
+  mapboxToken: string;
+  bgImage: string;
+}

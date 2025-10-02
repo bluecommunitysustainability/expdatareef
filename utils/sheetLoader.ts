@@ -12,21 +12,37 @@ import { getStJohnAnswers } from '../data/stJohnAutofillData';
 const parseAutofillData = (): Map<string, Map<string, string>> => {
     const allAnswers = new Map<string, Map<string, string>>();
     const lines = autofillData.split('\n').filter(line => line.trim() !== '');
-    const lineRegex = /^Destination: (.*?), Question: (.*?), Answer: (.*)$/;
+    
+    // Using string splitting for robustness instead of a fragile regex
+    const questionPrefix = ", Question: ";
+    const answerPrefix = ", Answer: ";
 
     for (const line of lines) {
-        const match = line.match(lineRegex);
-        if (match) {
-            const [, destination, questionText, answer] = match;
-            const dest = destination.trim();
-            const ans = answer.trim();
+        const destPrefixEnd = "Destination: ".length;
+        const questionPrefixStart = line.indexOf(questionPrefix);
+        const answerPrefixStart = line.indexOf(answerPrefix);
 
-            if (!allAnswers.has(dest)) {
-                allAnswers.set(dest, new Map<string, string>());
-            }
-            
-            allAnswers.get(dest)!.set(questionText.trim(), ans);
+        // Ensure both prefixes are found in the correct order to avoid parsing errors
+        if (questionPrefixStart === -1 || answerPrefixStart === -1 || questionPrefixStart >= answerPrefixStart) {
+            continue; // Skip malformed line
         }
+
+        const destination = line.substring(destPrefixEnd, questionPrefixStart);
+        const questionText = line.substring(questionPrefixStart + questionPrefix.length, answerPrefixStart);
+        const answer = line.substring(answerPrefixStart + answerPrefix.length);
+
+        if (!destination || !questionText) {
+            continue;
+        }
+
+        const dest = destination.trim();
+        const ans = answer.trim();
+
+        if (!allAnswers.has(dest)) {
+            allAnswers.set(dest, new Map<string, string>());
+        }
+        
+        allAnswers.get(dest)!.set(questionText.trim(), ans);
     }
     return allAnswers;
 };

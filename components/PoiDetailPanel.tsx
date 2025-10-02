@@ -14,6 +14,8 @@ const categoryStyles: Record<Poi['category'], string> = {
     Beach: 'bg-blue-500/20 text-blue-300 ring-blue-500/30',
     Landmark: 'bg-red-500/20 text-red-300 ring-red-500/30',
     Shopping: 'bg-pink-500/20 text-pink-300 ring-pink-500/30',
+    // FIX: Add missing style for the 'AI Suggestion' category.
+    'AI Suggestion': 'bg-cyan-500/20 text-cyan-300 ring-cyan-500/30',
 };
 
 export const PoiDetailPanel: React.FC<PoiDetailPanelProps> = ({ poi, onClose }) => {

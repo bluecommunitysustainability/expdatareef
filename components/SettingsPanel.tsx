@@ -1,60 +1,39 @@
-import React, { useState, useEffect, useRef } from 'react';
-import type { ApiKeys } from '../types';
-import { useTheme } from '../context/ThemeContext';
-import { availableThemes } from '../constants/teamColors';
+import React, { useState, useEffect } from 'react';
+import type { UserProfile } from '../../types';
+import { useTheme } from '../../context/ThemeContext';
+import { ProfileSettingsTab, BrandingSettingsTab, PermissionsSettingsTab, AccessibilitySettingsTab } from './settings';
 
 interface SettingsPanelProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (settings: { keys: ApiKeys, model: string, logo?: string | null, color?: string }) => void;
-  currentKeys: ApiKeys;
-  currentModel: string;
-  currentLogo?: string | null;
-  currentColor?: string;
+  userProfile: UserProfile | null;
+  onUpdateProfile: (profile: UserProfile) => void;
 }
 
-export const SettingsPanel: React.FC<SettingsPanelProps> = ({
-  isOpen,
-  onClose,
-  onSave,
-  currentKeys,
-  currentModel,
-  currentLogo,
-  currentColor,
-}) => {
-  const [keys, setKeys] = useState<ApiKeys>(currentKeys);
-  const [model, setModel] = useState(currentModel);
-  const [logo, setLogo] = useState<string | null | undefined>(currentLogo);
-  const [color, setColor] = useState<string | undefined>(currentColor);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+type Tab = 'profile' | 'branding' | 'permissions' | 'accessibility';
+
+export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, userProfile, onUpdateProfile }) => {
+  const [activeTab, setActiveTab] = useState<Tab>('profile');
+  const [editedProfile, setEditedProfile] = useState<UserProfile | null>(userProfile);
   const theme = useTheme();
 
   useEffect(() => {
-    setKeys(currentKeys);
-    setModel(currentModel);
-    setLogo(currentLogo);
-    setColor(currentColor);
-  }, [isOpen, currentKeys, currentModel, currentLogo, currentColor]);
+    if (isOpen) {
+      setEditedProfile(userProfile);
+      setActiveTab('profile'); // Reset to default tab
+    }
+  }, [isOpen, userProfile]);
 
   const handleSave = () => {
-    onSave({ keys, model, logo, color });
+    if (editedProfile) {
+      onUpdateProfile(editedProfile);
+    }
     onClose();
   };
+  
+  const canSeeBranding = userProfile?.role === 'admin' || userProfile?.role === 'Monitor';
 
-  const handleKeyChange = (provider: keyof ApiKeys, value: string) => {
-    setKeys(prev => ({ ...prev, [provider]: value }));
-  };
-
-  const handleLogoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setLogo(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+  if (!userProfile) return null;
 
   return (
      <>
@@ -72,89 +51,54 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           </button>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-6 space-y-6">
-          <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-gray-200 border-b border-gray-700 pb-2">Branding</h3>
-             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Custom Logo</label>
-              <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 bg-gray-700 rounded-md flex items-center justify-center">
-                      {logo ? <img src={logo} alt="Custom Logo Preview" className="max-w-full max-h-full object-contain" /> : <span className="text-gray-400 text-xs">Logo</span>}
-                  </div>
-                  <div className="flex-1">
-                      <input type="file" accept="image/png, image/jpeg, image/gif, image/svg+xml" ref={fileInputRef} onChange={handleLogoChange} className="hidden" />
-                      <button onClick={() => fileInputRef.current?.click()} className="px-3 py-2 text-sm bg-gray-600 hover:bg-gray-500 rounded-md">Upload Logo</button>
-                      {logo && <button onClick={() => setLogo(null)} className="px-3 py-2 text-sm text-red-500 hover:text-red-400 rounded-md ml-2">Remove</button>}
-                  </div>
-              </div>
+        <nav className="flex-shrink-0 border-b border-gray-700">
+            <div className="flex space-x-1 p-2">
+                <button 
+                    onClick={() => setActiveTab('profile')}
+                    className={`flex-1 py-2 px-2 text-sm font-semibold rounded-md transition-colors ${activeTab === 'profile' ? `${theme.background.secondary} text-white` : 'text-gray-300 hover:bg-gray-700'}`}
+                >
+                    Profile
+                </button>
+                {canSeeBranding && (
+                  <button 
+                      onClick={() => setActiveTab('branding')}
+                      className={`flex-1 py-2 px-2 text-sm font-semibold rounded-md transition-colors ${activeTab === 'branding' ? `${theme.background.secondary} text-white` : 'text-gray-300 hover:bg-gray-700'}`}
+                  >
+                      Branding & AI
+                  </button>
+                )}
+                <button 
+                    onClick={() => setActiveTab('permissions')}
+                    className={`flex-1 py-2 px-2 text-sm font-semibold rounded-md transition-colors ${activeTab === 'permissions' ? `${theme.background.secondary} text-white` : 'text-gray-300 hover:bg-gray-700'}`}
+                >
+                    Permissions
+                </button>
+                <button 
+                    onClick={() => setActiveTab('accessibility')}
+                    className={`flex-1 py-2 px-2 text-sm font-semibold rounded-md transition-colors ${activeTab === 'accessibility' ? `${theme.background.secondary} text-white` : 'text-gray-300 hover:bg-gray-700'}`}
+                >
+                    Accessibility
+                </button>
             </div>
-             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Primary Color</label>
-              <div className="flex flex-wrap gap-3">
-                  {availableThemes.map(themeOption => (
-                      <button 
-                          key={themeOption.value}
-                          onClick={() => setColor(themeOption.value)}
-                          className={`w-8 h-8 rounded-full focus:outline-none ring-2 ring-offset-2 ring-offset-gray-800 transition-all ${color === themeOption.value ? 'ring-white' : 'ring-transparent hover:ring-gray-500'}`}
-                          style={{ backgroundColor: themeOption.hex }}
-                          title={themeOption.name}
-                      />
-                  ))}
-                   <button 
-                        onClick={() => setColor(undefined)}
-                        className={`h-8 px-3 rounded-md focus:outline-none ring-2 ring-offset-2 ring-offset-gray-800 transition-all text-xs flex items-center gap-1 ${!color ? 'ring-white' : 'ring-transparent hover:ring-gray-500'} bg-gray-600`}
-                    >
-                      Default
-                    </button>
-              </div>
-            </div>
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-gray-200 border-b border-gray-700 pb-2">AI Configuration</h3>
-             <div className="mt-4">
-              <label htmlFor="model-select" className="block text-sm font-medium text-gray-300 mb-1">
-                Active AI Model
-              </label>
-              <select
-                id="model-select"
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-                className={`w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 ${theme.ring.primary}`}
-              >
-                <option value="gemini">Gemini</option>
-                <option value="openai">OpenAI</option>
-                <option value="claude">Claude</option>
-              </select>
-            </div>
-          </div>
+        </nav>
 
-          <div className="space-y-4">
-             <h3 className="text-lg font-semibold text-gray-200 border-b border-gray-700 pb-2">API Keys</h3>
-             <div>
-                <label htmlFor="mapbox-key" className="block text-sm font-medium text-gray-300 mb-1">Mapbox Access Token</label>
-                <input id="mapbox-key" type="password" value={keys.mapbox} onChange={(e) => handleKeyChange('mapbox', e.target.value)} className={`w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white ${theme.ring.primary}`} />
-             </div>
-             <div>
-                <label htmlFor="gemini-key" className="block text-sm font-medium text-gray-300 mb-1">Gemini API Key</label>
-                <input id="gemini-key" type="password" value={keys.gemini} onChange={(e) => handleKeyChange('gemini', e.target.value)} className={`w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white ${theme.ring.primary}`} />
-             </div>
-             <div>
-                <label htmlFor="openai-key" className="block text-sm font-medium text-gray-300 mb-1">OpenAI API Key</label>
-                <input id="openai-key" type="password" value={keys.openai} onChange={(e) => handleKeyChange('openai', e.target.value)} className={`w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white ${theme.ring.primary}`} />
-             </div>
-             <div>
-                <label htmlFor="claude-key" className="block text-sm font-medium text-gray-300 mb-1">Claude API Key</label>
-                <input id="claude-key" type="password" value={keys.claude} onChange={(e) => handleKeyChange('claude', e.target.value)} className={`w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white ${theme.ring.primary}`} />
-             </div>
-          </div>
+        <main className="flex-1 overflow-y-auto p-6">
+            {editedProfile && (
+              <>
+                {activeTab === 'profile' && <ProfileSettingsTab profile={editedProfile} setProfile={setEditedProfile} />}
+                {activeTab === 'branding' && canSeeBranding && <BrandingSettingsTab profile={editedProfile} setProfile={setEditedProfile} />}
+                {activeTab === 'permissions' && <PermissionsSettingsTab profile={editedProfile} />}
+                {activeTab === 'accessibility' && <AccessibilitySettingsTab profile={editedProfile} setProfile={setEditedProfile} />}
+              </>
+            )}
         </main>
         
-        <footer className="p-4 border-t border-gray-700">
+        <footer className="p-4 border-t border-gray-700 mt-auto">
             <button
               onClick={handleSave}
               className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${theme.background.primary} ${theme.background.hover} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 ${theme.ring.primary}`}
             >
-              Save Settings
+              Save Changes
             </button>
         </footer>
       </aside>

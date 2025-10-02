@@ -1,6 +1,6 @@
 import React, { useMemo, useEffect } from 'react';
 import { QuestionCard } from './QuestionCard';
-import type { Question, Answers, AnswerObject, AiContact, SectionTimestamps } from '../types';
+import type { Question, Answers, AnswerObject, AiContact, SectionTimestamps, UserProfile } from '../types';
 import { Type } from "@google/genai";
 import { ai } from '../utils/geminiClient';
 import { generateFullAnswerContext } from '../utils/aiHelper';
@@ -21,6 +21,8 @@ interface QuestionnaireProps {
   sectionTimestamps: SectionTimestamps;
   isAdmin: boolean;
   onBulkMergeAnswers: (newAnswers: Answers) => void;
+  isLoggedIn: boolean;
+  userProfile: UserProfile | null;
 }
 
 const getSectionCompletion = (questions: Question[], answers: Answers) => {
@@ -48,7 +50,9 @@ export const Questionnaire: React.FC<QuestionnaireProps> = ({
     setActiveQuestion,
     sectionTimestamps,
     isAdmin,
-    onBulkMergeAnswers
+    onBulkMergeAnswers,
+    isLoggedIn,
+    userProfile
 }) => {
   const [loadingAiContactsSection, setLoadingAiContactsSection] = React.useState<string | null>(null);
 
@@ -178,6 +182,8 @@ export const Questionnaire: React.FC<QuestionnaireProps> = ({
           const sectionQuestions = questionsBySection[section];
           const completion = getSectionCompletion(sectionQuestions, answers);
           const lastEdited = sectionTimestamps[section];
+          const isEditable = isAdmin || !userProfile?.editableSections || userProfile.editableSections.length === 0 || userProfile.editableSections.includes(section);
+          
           return (
             <FormAccordion
                 key={section}
@@ -197,6 +203,8 @@ export const Questionnaire: React.FC<QuestionnaireProps> = ({
                 setOpenSection={setOpenSection}
                 sectionQuestions={sectionQuestions}
                 onBulkMergeAnswers={onBulkMergeAnswers}
+                isLoggedIn={isLoggedIn}
+                isEditable={isEditable}
             >
                 <div className="space-y-6 pt-4">
                     {sectionQuestions.map(question => (
@@ -209,6 +217,7 @@ export const Questionnaire: React.FC<QuestionnaireProps> = ({
                             isAdmin={isAdmin}
                             questions={questions}
                             answers={answers}
+                            isEditable={isEditable}
                         />
                     ))}
                 </div>

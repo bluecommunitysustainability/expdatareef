@@ -1,9 +1,9 @@
-
-
 import React, { useState } from 'react';
-import type { Metric, SdgDetailInfo, GstcCriterionDetail, BcStrategy, InfoModalData } from '../../types';
+import type { Metric, SdgDetailInfo, GstcCriterionDetail, BcStrategy, InfoModalData, Poi, Tour } from '../../types';
 import { MetricsTab, SdgTab, GstcTab, BcTab } from '../info_sidebar';
 import { useTheme } from '../../context/ThemeContext';
+import { Accordion } from './Accordion';
+import { StakeholderMapWidget } from '../stakeholder/StakeholderMapWidget';
 
 interface StakeholderSidebarContentProps {
   onBack: () => void;
@@ -14,11 +14,14 @@ interface StakeholderSidebarContentProps {
     bc: BcStrategy[];
   } | null;
   onItemClick: (item: InfoModalData) => void;
+  pois: Poi[];
+  tours: Tour[];
+  mapboxToken: string;
 }
 
 type Tab = 'UNSDGs' | 'GSTC' | 'BC';
 
-export const StakeholderSidebarContent: React.FC<StakeholderSidebarContentProps> = ({ onBack, data, onItemClick }) => {
+export const StakeholderSidebarContent: React.FC<StakeholderSidebarContentProps> = ({ onBack, data, onItemClick, pois, tours, mapboxToken }) => {
   const [activeTab, setActiveTab] = useState<Tab>('UNSDGs');
   const theme = useTheme();
   
@@ -40,6 +43,9 @@ export const StakeholderSidebarContent: React.FC<StakeholderSidebarContentProps>
     }
   };
 
+  const publishedPois = pois.filter(p => p.status === 'published');
+  const publishedTours = tours.filter(t => t.status === 'published');
+
 
   return (
     <div className="flex flex-col h-full">
@@ -54,6 +60,14 @@ export const StakeholderSidebarContent: React.FC<StakeholderSidebarContentProps>
           <span>Back to Assessment</span>
         </button>
       </div>
+
+      <Accordion title="Sustainability Map & Tours">
+        <StakeholderMapWidget
+          pois={publishedPois}
+          tours={publishedTours}
+          mapboxToken={mapboxToken}
+        />
+      </Accordion>
       
        <nav className="flex-shrink-0 border-y border-gray-700/50">
           <div className="flex space-x-1 p-2">

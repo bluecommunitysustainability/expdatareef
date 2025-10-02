@@ -16,21 +16,24 @@ interface QuestionCardProps {
   isAdmin: boolean;
   questions: Question[];
   answers: Answers;
+  isEditable: boolean;
 }
 
-const BooleanToggle: React.FC<{ value: boolean; onChange: (value: boolean) => void }> = ({ value, onChange }) => {
+const BooleanToggle: React.FC<{ value: boolean; onChange: (value: boolean) => void; disabled: boolean; }> = ({ value, onChange, disabled }) => {
   const theme = useTheme();
   return (
     <div className="flex items-center space-x-4 mt-2">
       <button 
         onClick={() => onChange(true)} 
-        className={`px-6 py-2 rounded-md transition-colors text-sm font-medium ${value === true ? `${theme.background.secondary} text-white` : 'bg-gray-600 hover:bg-gray-500'}`}
+        disabled={disabled}
+        className={`px-6 py-2 rounded-md transition-colors text-sm font-medium ${value === true ? `${theme.background.secondary} text-white` : 'bg-gray-600 hover:bg-gray-500'} disabled:opacity-50 disabled:cursor-not-allowed`}
       >
         TRUE
       </button>
       <button 
         onClick={() => onChange(false)} 
-        className={`px-6 py-2 rounded-md transition-colors text-sm font-medium ${value === false ? 'bg-red-500 text-white' : 'bg-gray-600 hover:bg-gray-500'}`}
+        disabled={disabled}
+        className={`px-6 py-2 rounded-md transition-colors text-sm font-medium ${value === false ? 'bg-red-500 text-white' : 'bg-gray-600 hover:bg-gray-500'} disabled:opacity-50 disabled:cursor-not-allowed`}
       >
         FALSE
       </button>
@@ -49,7 +52,7 @@ const getSourceText = (url: string): string => {
   }
 };
 
-export const QuestionCard: React.FC<QuestionCardProps> = ({ question, currentAnswer, onAnswerChange, destination, isAdmin, questions, answers }) => {
+export const QuestionCard: React.FC<QuestionCardProps> = ({ question, currentAnswer, onAnswerChange, destination, isAdmin, questions, answers, isEditable }) => {
   const [researchStatus, setResearchStatus] = useState<'idle' | 'researching' | 'success' | 'error'>('idle');
   const [isHumanModalOpen, setIsHumanModalOpen] = useState(false);
   const questionText = question.text.replace(/{Destination}/g, destination);
@@ -163,7 +166,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question, currentAns
 
   const renderInput = () => {
     const commonProps = {
-      className: `w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 ${theme.ring.primary} focus:border-${theme.name}-500 mt-1`,
+      className: `w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 ${theme.ring.primary} focus:border-${theme.name}-500 mt-1 disabled:opacity-50 disabled:cursor-not-allowed`,
+      disabled: !isEditable,
     };
 
     const answerValue = currentAnswer?.value;
@@ -179,10 +183,11 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question, currentAns
       case QuestionType.TEXTAREA:
         return <textarea {...commonProps} rows={4} value={(answerValue as string) || ''} onChange={(e) => handleValueChange(e.target.value)} />;
       case QuestionType.BOOLEAN:
-        return <BooleanToggle value={answerValue as boolean} onChange={handleValueChange} />;
+        return <BooleanToggle value={answerValue as boolean} onChange={handleValueChange} disabled={!isEditable} />;
       case QuestionType.FILE:
         // File uploader needs to be handled slightly differently
-        return <FileUploader currentFile={answerValue as File | string} onChange={(file) => handleValueChange(file)} />;
+        // Assuming FileUploader also needs a disabled prop
+        return <FileUploader currentFile={answerValue as File | string} onChange={(file) => handleValueChange(file)} disabled={!isEditable} />;
       default:
         return null;
     }
@@ -232,7 +237,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question, currentAns
          {isAdmin && question.type !== QuestionType.FILE && (
             <button
               onClick={handleAiResearch}
-              disabled={researchStatus === 'researching'}
+              disabled={researchStatus === 'researching' || !isEditable}
               className={getButtonClass()}
               title="Use AI to find an answer for this question"
             >
