@@ -19,6 +19,90 @@ const fileToBase64 = (file: File): Promise<string> => {
     });
 };
 
+const predefinedReactions = ['👍', '❤️', '💡', '😂', '🤔'];
+
+const Reactions: React.FC<{ 
+    reactions: ForumReaction[], 
+    onReact: (emoji: string) => void,
+    currentUserEmail: string
+}> = ({ reactions, onReact, currentUserEmail }) => {
+    const [pickerOpen, setPickerOpen] = useState(false);
+    const theme = useTheme();
+    const pickerRef = useRef<HTMLDivElement>(null);
+
+     useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (pickerRef.current && !pickerRef.current.contains(event.target as Node)) {
+                setPickerOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [pickerRef]);
+
+    const reactionsByEmoji = useMemo(() => {
+        const groups: Record<string, string[]> = {};
+        for (const reaction of reactions) {
+            if (!groups[reaction.emoji]) {
+                groups[reaction.emoji] = [];
+            }
+            groups[reaction.emoji].push(reaction.userId);
+        }
+        return groups;
+    }, [reactions]);
+
+    const sortedEmojis = Object.keys(reactionsByEmoji).sort((a, b) => reactionsByEmoji[b].length - reactionsByEmoji[a].length);
+
+    return (
+        <div className="mt-2 flex items-center gap-2 flex-wrap">
+            {sortedEmojis.map((emoji) => {
+                const userIds = reactionsByEmoji[emoji];
+                const userHasReacted = userIds.includes(currentUserEmail);
+                return (
+                    <button 
+                        key={emoji}
+                        onClick={() => onReact(emoji)}
+                        className={`px-2 py-1 text-xs rounded-full flex items-center gap-1 transition-colors ${userHasReacted ? `${theme.background.secondary} text-white border border-transparent` : 'bg-gray-700 hover:bg-gray-600 border border-transparent hover:border-gray-500'}`}
+                        title={userIds.length > 1 ? `${userIds.length} users reacted with ${emoji}` : `1 user reacted with ${emoji}`}
+                    >
+                        <span>{emoji}</span>
+                        <span className="font-semibold">{userIds.length}</span>
+                    </button>
+                );
+            })}
+            <div className="relative" ref={pickerRef}>
+                <button 
+                    onClick={() => setPickerOpen(p => !p)} 
+                    className="p-1.5 rounded-full bg-gray-700 hover:bg-gray-600 text-gray-400 hover:text-white"
+                    title="Add reaction"
+                >
+                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 100-2 1 1 0 000 2zm7-1a1 1 0 11-2 0 1 1 0 012 0zm-.464 5.535a1 1 0 01-1.415-1.414 3 3 0 00-4.242 0 1 1 0 01-1.415 1.414 5 5 0 017.072 0z" clipRule="evenodd" />
+                    </svg>
+                </button>
+                {pickerOpen && (
+                    <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-gray-900 border border-gray-600 rounded-full shadow-lg p-1 flex gap-1 animate-fade-in">
+                        {predefinedReactions.map(emoji => (
+                             <button 
+                                key={emoji}
+                                onClick={() => {
+                                    onReact(emoji);
+                                    setPickerOpen(false);
+                                }}
+                                className="p-2 text-xl rounded-full hover:bg-gray-700 transition-transform hover:scale-125"
+                             >
+                                 {emoji}
+                             </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
 const ForumThreadCard: React.FC<{ post: ForumPost, onSelect: () => void, isUnread: boolean, author?: UserProfile }> = ({ post, onSelect, isUnread, author }) => {
     const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(author?.name || '?')}&background=4b5563&color=e2e8f0&size=96`;
     const theme = useTheme();
@@ -69,7 +153,7 @@ export const ForumView: React.FC<ForumViewProps> = ({ destination, currentUser, 
 
     const [activeCategory, setActiveCategory] = useState<string>('All');
     const theme = useTheme();
-
+    
     // User Mention State
     const [mentionSuggestions, setMentionSuggestions] = useState<UserProfile[]>([]);
     const [mentionTarget, setMentionTarget] = useState<{ top: number; left: number; textarea: HTMLTextAreaElement; type: 'post' | 'comment'; } | null>(null);
@@ -227,33 +311,41 @@ export const ForumView: React.FC<ForumViewProps> = ({ destination, currentUser, 
 
     const handleReaction = (targetId: string, emoji: string, isComment: boolean) => {
         const updatedPosts = posts.map(post => {
-            let target: ForumPost | ForumComment | undefined;
-            let targetArray: (ForumPost | ForumComment)[];
-            let updateFn: (item: ForumPost | ForumComment) => (ForumPost | ForumComment);
-
             if (isComment) {
-                target = post.comments.find(c => c.id === targetId);
-                targetArray = post.comments;
-                updateFn = (updatedComment) => ({...post, comments: post.comments.map(c => c.id === targetId ? updatedComment : c)});
-            } else {
-                if (post.id === targetId) {
-                    target = post;
-                    targetArray = [post]; 
-                    updateFn = (updatedPost) => updatedPost;
+                const commentIndex = post.comments.findIndex(c => c.id === targetId);
+                if (commentIndex > -1) {
+                    const comment = post.comments[commentIndex];
+                    const existingReactionIndex = comment.reactions.findIndex(r => r.userId === currentUser.email && r.emoji === emoji);
+                    
+                    let newReactions: ForumReaction[];
+                    if (existingReactionIndex > -1) {
+                        newReactions = comment.reactions.filter((_, index) => index !== existingReactionIndex);
+                    } else {
+                        // Allow only one reaction type per user on a single item
+                        const otherReactions = comment.reactions.filter(r => r.userId !== currentUser.email);
+                        newReactions = [...otherReactions, { emoji, userId: currentUser.email }];
+                    }
+                    
+                    const updatedComments = [...post.comments];
+                    updatedComments[commentIndex] = { ...comment, reactions: newReactions };
+                    
+                    return { ...post, comments: updatedComments };
                 }
+            } else if (post.id === targetId) {
+                const existingReactionIndex = post.reactions.findIndex(r => r.userId === currentUser.email && r.emoji === emoji);
+                
+                let newReactions: ForumReaction[];
+                 if (existingReactionIndex > -1) {
+                    newReactions = post.reactions.filter((_, index) => index !== existingReactionIndex);
+                } else {
+                    // Allow only one reaction type per user on a single item
+                    const otherReactions = post.reactions.filter(r => r.userId !== currentUser.email);
+                    newReactions = [...otherReactions, { emoji, userId: currentUser.email }];
+                }
+                
+                return { ...post, reactions: newReactions };
             }
             
-            if (target) {
-                const existingReactionIndex = target.reactions.findIndex(r => r.userId === currentUser.email && r.emoji === emoji);
-                let newReactions: ForumReaction[];
-                if (existingReactionIndex > -1) {
-                    newReactions = target.reactions.filter((_, index) => index !== existingReactionIndex);
-                } else {
-                    newReactions = [...target.reactions, { emoji, userId: currentUser.email }];
-                }
-                const updatedTarget = { ...target, reactions: newReactions };
-                return updateFn(updatedTarget) as ForumPost;
-            }
             return post;
         });
         setPosts(updatedPosts);
@@ -302,11 +394,11 @@ export const ForumView: React.FC<ForumViewProps> = ({ destination, currentUser, 
                     {selectedPost.imageUrl && <img src={selectedPost.imageUrl} alt="Post content" className="max-w-full md:max-w-md rounded-lg my-4"/>}
                     <div className="text-gray-300 whitespace-pre-wrap">{renderWithMentions(selectedPost.content)}</div>
 
-                     <div className="mt-4 flex items-center gap-2">
-                        <button onClick={() => handleReaction(selectedPost.id, '👍', false)} className={`px-2 py-1 text-xs rounded-full flex items-center gap-1 ${selectedPost.reactions.some(r => r.userId === currentUser.email) ? 'bg-blue-600 text-white' : 'bg-gray-700 hover:bg-gray-600'}`}>
-                            👍 <span className="font-semibold">{selectedPost.reactions.filter(r => r.emoji === '👍').length}</span>
-                        </button>
-                    </div>
+                    <Reactions
+                        reactions={selectedPost.reactions}
+                        onReact={(emoji) => handleReaction(selectedPost.id, emoji, false)}
+                        currentUserEmail={currentUser.email}
+                    />
 
                     <div className="mt-8">
                         <h3 className="text-lg font-semibold text-white mb-4">Comments ({selectedPost.comments.length})</h3>
@@ -316,24 +408,24 @@ export const ForumView: React.FC<ForumViewProps> = ({ destination, currentUser, 
                                 const commentAvatar = commentAuthor?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(commentAuthor?.name || '?')}&background=4b5563&color=e2e8f0&size=96`;
                                 return (
                                     <div key={comment.id} className="flex gap-3">
-                                        <img src={commentAvatar} alt={commentAuthor?.name} className="w-8 h-8 rounded-full mt-1"/>
+                                        <img src={commentAvatar} alt={commentAuthor?.name} className="w-8 h-8 rounded-full mt-1 flex-shrink-0"/>
                                         <div className="flex-1 bg-gray-900/50 p-3 rounded-lg">
                                             <p className="text-sm text-gray-400">
                                                 <span className="font-bold text-gray-200">{commentAuthor?.name}</span> • {new Date(comment.timestamp).toLocaleString()}
                                             </p>
                                             <div className="text-gray-300 mt-1 whitespace-pre-wrap">{renderWithMentions(comment.content)}</div>
-                                             <div className="mt-2 flex items-center gap-2">
-                                                <button onClick={() => handleReaction(comment.id, '👍', true)} className={`px-2 py-1 text-xs rounded-full flex items-center gap-1 ${comment.reactions.some(r => r.userId === currentUser.email) ? 'bg-blue-600 text-white' : 'bg-gray-700 hover:bg-gray-600'}`}>
-                                                    👍 <span className="font-semibold">{comment.reactions.filter(r => r.emoji === '👍').length}</span>
-                                                </button>
-                                            </div>
+                                            <Reactions
+                                                reactions={comment.reactions}
+                                                onReact={(emoji) => handleReaction(comment.id, emoji, true)}
+                                                currentUserEmail={currentUser.email}
+                                            />
                                         </div>
                                     </div>
                                 );
                             })}
                         </div>
                         <div className="mt-6 flex gap-3">
-                             <img src={currentUser.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.name || '?')}&background=4b5563&color=e2e8f0&size=96`} alt={currentUser.name} className="w-8 h-8 rounded-full"/>
+                             <img src={currentUser.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.name || '?')}&background=4b5563&color=e2e8f0&size=96`} alt={currentUser.name} className="w-8 h-8 rounded-full flex-shrink-0"/>
                             <div className="flex-1 relative">
                                 <textarea ref={commentTextareaRef} value={newComment} onChange={e => handleContentChange(e, 'comment')} placeholder="Add a comment... Use @ to mention a user." rows={2} className={`w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white ${theme.ring.primary}`}></textarea>
                                 <button onClick={() => handleAddComment(selectedPost.id)} className={`mt-2 px-4 py-1.5 text-xs font-medium text-white ${theme.background.primary} ${theme.background.hover} rounded-md`}>Post Comment</button>

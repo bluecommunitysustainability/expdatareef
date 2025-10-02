@@ -20,6 +20,7 @@ import { ExplanationPage } from './components/ExplanationPage';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { GoalsView } from './components/Goals';
 import { CommunityView } from './components/CommunityView';
+import { RecordingStudioModal } from './components/RecordingStudioModal';
 
 
 // Hooks, constants, utils, types
@@ -97,6 +98,7 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
   const [isSettingsPanelOpen, setIsSettingsPanelOpen] = useState(false);
   const [isDataSyncPanelOpen, setIsDataSyncPanelOpen] = useState(false);
   const [isAdminDashboardOpen, setIsAdminDashboardOpen] = useState(false);
+  const [isRecordingStudioOpen, setIsRecordingStudioOpen] = useState(false);
 
   // State for map interaction
   const [isMapSelectionMode, setIsMapSelectionMode] = useState(false);
@@ -282,6 +284,7 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
         setIsCollapsed={setIsSidebarCollapsed}
         onUserClick={() => setIsAuthPanelOpen(true)}
         onAdminClick={() => setIsAdminDashboardOpen(true)}
+        onRecordingStudioClick={() => setIsRecordingStudioOpen(true)}
         onPoiSelect={setSelectedPoi}
         onQuestionSelect={handleSidebarQuestionSelect}
         userProfile={userProfile}
@@ -501,6 +504,14 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
             questions={questions}
             mapboxToken={apiKeys.mapbox}
             apiKeys={apiKeys}
+        />
+       )}
+       {isMonitorOrAdmin && (
+        <RecordingStudioModal
+            isOpen={isRecordingStudioOpen}
+            onClose={() => setIsRecordingStudioOpen(false)}
+            questions={questions}
+            onAnswerUpdate={handleAnswerUpdate}
         />
        )}
     </div>

@@ -27,6 +27,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setIsCollapsed,
   onUserClick,
   onAdminClick,
+  onRecordingStudioClick,
   onPoiSelect,
   onQuestionSelect,
   userProfile,
@@ -193,11 +194,35 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </div>
                 )}
                 </button>
+                {isMonitorOrAdmin && (
+                     <button
+                        onClick={onRecordingStudioClick}
+                        className="p-2 rounded-full hover:bg-gray-700/50"
+                        title="Recording Studio"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+                          <path d="M14.553 5.447A.5.5 0 0115 5.86v8.28a.5.5 0 01-.447.413l-3-1A.5.5 0 0111 13.14V6.86a.5.5 0 01.553-.413l3 1z" />
+                        </svg>
+                      </button>
+                )}
                 {/* Show export button here if sidebar is expanded, or if collapsed but user is NOT an admin */}
                 {isLoggedIn && (!isCollapsed || !isAdmin) && exportButtonAndMenu}
             </div>
              {isCollapsed && (
                 <div className="mt-auto flex flex-col items-center gap-2">
+                    {isMonitorOrAdmin && (
+                         <button
+                            onClick={onRecordingStudioClick}
+                            className="p-2 rounded-full hover:bg-gray-700/50"
+                            title="Recording Studio"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+                              <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+                              <path d="M14.553 5.447A.5.5 0 0115 5.86v8.28a.5.5 0 01-.447.413l-3-1A.5.5 0 0111 13.14V6.86a.5.5 0 01.553-.413l3 1z" />
+                            </svg>
+                          </button>
+                    )}
                     {/* When collapsed and user is an admin, show the export button here, at the bottom. */}
                     {isAdmin && isLoggedIn && exportButtonAndMenu}
                     {isAdmin && (
@@ -306,6 +331,7 @@ interface SidebarProps {
   setIsCollapsed: (isCollapsed: boolean) => void;
   onUserClick: () => void;
   onAdminClick: () => void;
+  onRecordingStudioClick: () => void;
   onPoiSelect: (poi: Poi) => void;
   onQuestionSelect: (questionId: string) => void;
   userProfile: UserProfile | null;

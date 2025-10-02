@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Modal } from '../Modal';
 import type { UserProfile } from '../../types';
 
@@ -8,16 +8,33 @@ interface ConferenceViewProps {
 
 export const ConferenceView: React.FC<ConferenceViewProps> = ({ teamMembers }) => {
     const [isFullScreen, setIsFullScreen] = useState(false);
+    const [tick, setTick] = useState(0); // State to trigger periodic updates
 
-    // Mock statuses for demonstration
-    const getStatus = (email: string) => {
-        // Simple hash to get a pseudo-random but consistent status for each user
+    // Function to get a pseudo-random but periodically changing status
+    const getStatus = (email: string, currentTimeTick: number) => {
         const hash = email.split('').reduce((acc, char) => char.charCodeAt(0) + ((acc << 5) - acc), 0);
-        const statusIndex = Math.abs(hash) % 3;
+        // Use a larger modulo and more cases for 'Available' to make it the most common status
+        const statusIndex = (Math.abs(hash) + currentTimeTick) % 7; 
         if (statusIndex === 0) return { text: 'In a call', color: 'bg-yellow-500' };
         if (statusIndex === 1) return { text: 'Away', color: 'bg-gray-500' };
-        return { text: 'Available', color: 'bg-green-500' };
+        return { text: 'Available', color: 'bg-green-500' }; // Available for indices 2, 3, 4, 5, 6
     };
+
+    // Effect to update the 'tick' every 5 seconds, causing statuses to re-evaluate
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setTick(t => t + 1);
+        }, 5000); // Update status every 5 seconds
+        return () => clearInterval(interval);
+    }, []);
+
+    const statuses = useMemo(() => {
+        return teamMembers.reduce((acc, member) => {
+            acc[member.id] = getStatus(member.email, tick);
+            return acc;
+        }, {} as Record<string, { text: string; color: string }>);
+    }, [teamMembers, tick]);
+
 
     return (
         <div className="flex flex-col md:flex-row gap-6 animate-fade-in h-full">
@@ -31,14 +48,16 @@ export const ConferenceView: React.FC<ConferenceViewProps> = ({ teamMembers }) =
                     <h4 className="font-semibold text-gray-200 mb-3">Team Status</h4>
                     <ul className="space-y-3 max-h-40 overflow-y-auto">
                         {teamMembers.map(member => {
-                            const status = getStatus(member.email);
+                            const status = statuses[member.id];
                             return (
                                 <li key={member.id} className="flex items-center justify-between text-sm">
                                     <span className="text-gray-300">{member.name}</span>
-                                    <div className="flex items-center gap-2">
-                                        <div className={`w-2 h-2 rounded-full ${status.color}`} title={status.text}></div>
-                                        <span className="text-gray-400">{status.text}</span>
-                                    </div>
+                                    {status && (
+                                        <div className="flex items-center gap-2">
+                                            <div className={`w-2 h-2 rounded-full ${status.color}`} title={status.text}></div>
+                                            <span className="text-gray-400">{status.text}</span>
+                                        </div>
+                                    )}
                                 </li>
                             );
                         })}
