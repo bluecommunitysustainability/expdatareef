@@ -1,5 +1,3 @@
-// types.ts
-
 export enum QuestionType {
   TEXT = 'text',
   TEXTAREA = 'textarea',
@@ -184,4 +182,12 @@ export interface ForumPost {
   comments: ForumComment[];
   reactions: ForumReaction[];
   readBy: string[]; // array of user emails
+}
+
+// Conference types
+export interface ScheduledEvent {
+  id: string;
+  title: string;
+  date: string; // YYYY-MM-DD
+  time: string; // HH:MM
 }

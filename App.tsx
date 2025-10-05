@@ -333,17 +333,42 @@ const MainLayout: React.FC<Omit<AppProps, 'selectedDestination'> & {
           </div>
           <div className="flex items-center gap-2 flex-wrap justify-end">
             <div className="flex items-center bg-gray-700 rounded-lg p-1">
-              <button onClick={() => handleViewChange('form')} className={`px-3 py-1 text-sm rounded-md transition-colors ${view === 'form' ? `${theme.background.secondary} text-white` : 'text-gray-300'}`}>Form</button>
-              <button onClick={() => handleViewChange('goals')} className={`px-3 py-1 text-sm rounded-md transition-colors ${view === 'goals' ? `${theme.background.secondary} text-white` : 'text-gray-300'}`}>Goals</button>
-              <button onClick={() => handleViewChange('dashboard')} className={`px-3 py-1 text-sm rounded-md transition-colors ${view === 'dashboard' ? `${theme.background.secondary} text-white` : 'text-gray-300'}`}>Dashboard</button>
-              <button onClick={() => handleViewChange('map')} className={`px-3 py-1 text-sm rounded-md transition-colors ${view === 'map' ? `${theme.background.secondary} text-white` : 'text-gray-300'}`}>Map</button>
-              {isMonitorOrAdmin && (
-                 <button onClick={() => handleViewChange('community')} className={`px-3 py-1 text-sm rounded-md transition-colors ${view === 'community' ? `${theme.background.secondary} text-white` : 'text-gray-300'}`}>Community</button>
-              )}
+                <button title="Form" onClick={() => handleViewChange('form')} className={`flex items-center justify-center text-sm rounded-md transition-colors w-10 h-8 sm:w-auto sm:px-3 ${view === 'form' ? `${theme.background.secondary} text-white` : 'text-gray-300'}`}>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0 sm:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                    <span className="hidden sm:inline">Form</span>
+                </button>
+                <button title="Goals" onClick={() => handleViewChange('goals')} className={`flex items-center justify-center text-sm rounded-md transition-colors w-10 h-8 sm:w-auto sm:px-3 ${view === 'goals' ? `${theme.background.secondary} text-white` : 'text-gray-300'}`}>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0 sm:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 21v-4m0 4v-4m0 4h4m-4 0H3m18-4v-4m0 4v-4m0 4h-4m4 0h-4m-4-14v4m0-4v4m0-4H7m4 0h4M7 7V3m0 4V3m0 4H3m4 0h4" /></svg>
+                    <span className="hidden sm:inline">Goals</span>
+                </button>
+                <button title="Dashboard" onClick={() => handleViewChange('dashboard')} className={`flex items-center justify-center text-sm rounded-md transition-colors w-10 h-8 sm:w-auto sm:px-3 ${view === 'dashboard' ? `${theme.background.secondary} text-white` : 'text-gray-300'}`}>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0 sm:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                    <span className="hidden sm:inline">Dashboard</span>
+                </button>
+                <button title="Map" onClick={() => handleViewChange('map')} className={`flex items-center justify-center text-sm rounded-md transition-colors w-10 h-8 sm:w-auto sm:px-3 ${view === 'map' ? `${theme.background.secondary} text-white` : 'text-gray-300'}`}>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0 sm:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l5.447-2.724A1 1 0 0021 16.382V5.618a1 1 0 00-.553-.894L15 2m-6 5l6-3m-6 5l6 10" /></svg>
+                    <span className="hidden sm:inline">Map</span>
+                </button>
+                {isMonitorOrAdmin && (
+                    <button title="Community" onClick={() => handleViewChange('community')} className={`flex items-center justify-center text-sm rounded-md transition-colors w-10 h-8 sm:w-auto sm:px-3 ${view === 'community' ? `${theme.background.secondary} text-white` : 'text-gray-300'}`}>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0 sm:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                        <span className="hidden sm:inline">Community</span>
+                    </button>
+                )}
             </div>
             
             {isMonitorOrAdmin && <SaveButton onSave={handleSave} onLoad={handleLoad} saveStatus={saveStatus} />}
             {isMonitorOrAdmin && <CheckSheetButton onClick={() => setIsDataSyncPanelOpen(true)} />}
+            
+            {!isLoggedIn && (
+                <button
+                    onClick={() => setIsAuthPanelOpen(true)}
+                    className="p-2 text-sm font-medium text-white bg-gray-600 hover:bg-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-gray-500 hidden sm:block"
+                    title="Sign In"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                </button>
+            )}
 
             {isLoggedIn && (
               <button 
@@ -728,7 +753,7 @@ function App() {
   if (!selectedDestination) {
     return (
       <div 
-        className="min-h-screen text-white flex flex-col items-center justify-center p-4 relative bg-cover bg-center"
+        className="min-h-screen text-white flex flex-col items-center justify-center p-4 sm:p-6 pb-24 sm:pb-6 relative bg-cover bg-center"
         style={{ backgroundImage: `url(${landingBg?.image || 'https://storage.ning.com/topology/rest/1.0/file/get/13715201495?profile=original'})` }}
       >
         <div className="absolute inset-0 bg-gray-900 bg-opacity-70"></div>
@@ -755,7 +780,7 @@ function App() {
                 </button>
                 {landingBg && <span className="text-sm font-semibold text-gray-300">{landingBg.name}</span>}
             </div>
-            <button onClick={() => setIsAuthPanelOpen(true)} className="p-1 rounded-full hover:bg-gray-700/50 bg-gray-800/50 backdrop-blur-sm" title="User Account">
+            <button onClick={() => setIsAuthPanelOpen(true)} className="p-1 rounded-full hover:bg-gray-700/50 bg-gray-800/50 backdrop-blur-sm hidden sm:block" title="User Account">
                 {isLoggedIn && userAvatar ? (
                     <img src={userAvatar} alt="User Avatar" className="h-8 w-8 rounded-full object-cover" />
                 ) : (
@@ -767,11 +792,11 @@ function App() {
         </div>
 
         {landingView === 'selector' ? (
-            <div className="relative z-10 w-full max-w-lg bg-gray-800/80 backdrop-blur-sm p-8 rounded-lg shadow-2xl text-center">
-              <img src="https://labs.landsurveyorsunited.com/datareef/icons/web/android-chrome-192x192.png" alt="DataReef Logo" className="mx-auto h-64 w-auto mb-4" />
-              <h1 className="text-3xl font-bold text-teal-400 mb-2">DataReef Observatory</h1>
-              <p className="text-gray-400 mb-2">Because without the data there will soon be no reef.</p>
-              <p className="text-gray-400 text-sm mb-6 italic">Human Sourced Data with AI insights for a more Sustainable Tourism Impact.</p>
+            <div className="relative z-10 w-full max-w-md bg-gray-800/80 backdrop-blur-sm p-6 sm:p-8 rounded-lg shadow-2xl text-center">
+              <img src="https://labs.landsurveyorsunited.com/datareef/icons/web/android-chrome-192x192.png" alt="DataReef Logo" className="mx-auto h-24 sm:h-40 w-auto mb-4" />
+              <h1 className="text-xl sm:text-3xl font-bold text-teal-400 mb-2">DataReef Observatory</h1>
+              <p className="text-gray-400 mb-2 text-sm sm:text-base">Because without the data there will soon be no reef.</p>
+              <p className="text-gray-400 text-xs sm:text-sm mb-6 italic">Human Sourced Data with AI insights for a more Sustainable Tourism Impact.</p>
               <DestinationSelector 
                 destinations={destinationNames}
                 selectedDestination={selectedDestination}
@@ -790,6 +815,19 @@ function App() {
             setIsAuthPanelOpen(false);
           }}
         />
+        
+        {!isLoggedIn && (
+          <footer className="fixed bottom-0 left-0 right-0 bg-gray-800/90 backdrop-blur-sm p-2 border-t border-gray-700/50 flex justify-center items-center sm:hidden z-20">
+            <button 
+                onClick={() => setIsAuthPanelOpen(true)} 
+                className="flex flex-col items-center text-gray-300 hover:text-white px-6 py-1"
+                title="Sign In"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                <span className="text-xs mt-1">Sign In</span>
+            </button>
+          </footer>
+        )}
       </div>
     );
   }

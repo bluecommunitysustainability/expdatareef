@@ -12,14 +12,14 @@ export const DestinationSelector: React.FC<DestinationSelectorProps> = ({ destin
 
   return (
     <div className="mb-6">
-      <label htmlFor="destination-select" className="block text-lg font-medium text-gray-300 mb-2">
+      <label htmlFor="destination-select" className="block text-base sm:text-lg font-medium text-gray-300 mb-2">
         Select a Destination
       </label>
       <select
         id="destination-select"
         value={selectedDestination}
         onChange={(e) => onSelectDestination(e.target.value)}
-        className={`w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-3 px-4 text-white focus:outline-none focus:ring-2 ${theme.ring.primary} focus:border-${theme.name}-500 text-lg`}
+        className={`w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-base sm:py-3 sm:px-4 sm:text-lg text-white focus:outline-none focus:ring-2 ${theme.ring.primary} focus:border-${theme.name}-500`}
       >
         <option value="">-- Please choose a destination --</option>
         {destinations.map((dest) => (

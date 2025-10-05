@@ -1,30 +1,35 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Modal } from '../Modal';
-import type { UserProfile } from '../../types';
+import type { UserProfile, ScheduledEvent } from '../../types';
+import { useLocalStorage } from '../../hooks/useLocalStorage';
 
 interface ConferenceViewProps {
     teamMembers: UserProfile[];
+    destination: string;
 }
 
-export const ConferenceView: React.FC<ConferenceViewProps> = ({ teamMembers }) => {
+export const ConferenceView: React.FC<ConferenceViewProps> = ({ teamMembers, destination }) => {
     const [isFullScreen, setIsFullScreen] = useState(false);
-    const [tick, setTick] = useState(0); // State to trigger periodic updates
+    const [tick, setTick] = useState(0);
 
-    // Function to get a pseudo-random but periodically changing status
+    // Event scheduling state
+    const [events, setEvents] = useLocalStorage<ScheduledEvent[]>(`conference-events_${destination}`, []);
+    const [newEventTitle, setNewEventTitle] = useState('');
+    const [newEventDate, setNewEventDate] = useState('');
+    const [newEventTime, setNewEventTime] = useState('');
+
     const getStatus = (email: string, currentTimeTick: number) => {
         const hash = email.split('').reduce((acc, char) => char.charCodeAt(0) + ((acc << 5) - acc), 0);
-        // Use a larger modulo and more cases for 'Available' to make it the most common status
         const statusIndex = (Math.abs(hash) + currentTimeTick) % 7; 
         if (statusIndex === 0) return { text: 'In a call', color: 'bg-yellow-500' };
         if (statusIndex === 1) return { text: 'Away', color: 'bg-gray-500' };
-        return { text: 'Available', color: 'bg-green-500' }; // Available for indices 2, 3, 4, 5, 6
+        return { text: 'Available', color: 'bg-green-500' };
     };
 
-    // Effect to update the 'tick' every 5 seconds, causing statuses to re-evaluate
     useEffect(() => {
         const interval = setInterval(() => {
             setTick(t => t + 1);
-        }, 5000); // Update status every 5 seconds
+        }, 5000);
         return () => clearInterval(interval);
     }, []);
 
@@ -34,7 +39,34 @@ export const ConferenceView: React.FC<ConferenceViewProps> = ({ teamMembers }) =
             return acc;
         }, {} as Record<string, { text: string; color: string }>);
     }, [teamMembers, tick]);
+    
+    const sortedEvents = useMemo(() => {
+        return [...events].sort((a, b) => new Date(`${a.date}T${a.time}`).getTime() - new Date(`${b.date}T${b.time}`).getTime());
+    }, [events]);
 
+    const handleScheduleCall = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newEventTitle || !newEventDate || !newEventTime) {
+            alert("Please fill out all fields to schedule a call.");
+            return;
+        }
+        const newEvent: ScheduledEvent = {
+            id: `event-${Date.now()}`,
+            title: newEventTitle,
+            date: newEventDate,
+            time: newEventTime,
+        };
+        setEvents(prev => [...prev, newEvent]);
+        setNewEventTitle('');
+        setNewEventDate('');
+        setNewEventTime('');
+    };
+
+    const handleDeleteEvent = (eventId: string) => {
+        if (window.confirm("Are you sure you want to delete this scheduled call?")) {
+            setEvents(prev => prev.filter(event => event.id !== eventId));
+        }
+    };
 
     return (
         <div className="flex flex-col md:flex-row gap-6 animate-fade-in h-full">
@@ -64,21 +96,31 @@ export const ConferenceView: React.FC<ConferenceViewProps> = ({ teamMembers }) =
                     </ul>
                 </div>
 
+                <form onSubmit={handleScheduleCall} className="bg-gray-800/50 p-4 rounded-lg border border-gray-700/50 space-y-3">
+                    <h4 className="font-semibold text-gray-200">Schedule a New Call</h4>
+                    <input type="text" placeholder="Meeting Title" value={newEventTitle} onChange={e => setNewEventTitle(e.target.value)} required className="w-full bg-gray-700 border border-gray-600 rounded-md py-1.5 px-2 text-sm text-white" />
+                    <div className="flex gap-2">
+                        <input type="date" value={newEventDate} onChange={e => setNewEventDate(e.target.value)} required className="w-1/2 bg-gray-700 border border-gray-600 rounded-md py-1.5 px-2 text-sm text-white" />
+                        <input type="time" value={newEventTime} onChange={e => setNewEventTime(e.target.value)} required className="w-1/2 bg-gray-700 border border-gray-600 rounded-md py-1.5 px-2 text-sm text-white" />
+                    </div>
+                    <button type="submit" className="w-full bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold py-2 px-4 rounded">
+                        Schedule Call
+                    </button>
+                </form>
+
                 <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700/50">
                     <h4 className="font-semibold text-gray-200 mb-2">Upcoming Meetings</h4>
-                    <ul className="space-y-3">
-                        <li className="text-sm">
-                            <p className="font-bold text-teal-400">Tomorrow - 10:00 AM</p>
-                            <p className="text-gray-300">Weekly Sync: Goals Review</p>
-                        </li>
-                         <li className="text-sm">
-                            <p className="font-bold text-teal-400">Next Friday - 2:00 PM</p>
-                            <p className="text-gray-300">Deep Dive: Cultural Heritage Metrics</p>
-                        </li>
+                    <ul className="space-y-3 max-h-48 overflow-y-auto">
+                        {sortedEvents.length > 0 ? sortedEvents.map(event => (
+                            <li key={event.id} className="text-sm group relative">
+                                <p className="font-bold text-teal-400">{new Date(`${event.date}T${event.time}`).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</p>
+                                <p className="text-gray-300">{event.title}</p>
+                                <button onClick={() => handleDeleteEvent(event.id)} className="absolute top-0 right-0 p-1 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity" title="Delete event">
+                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+                                </button>
+                            </li>
+                        )) : <p className="text-sm text-gray-500 italic">No meetings scheduled.</p>}
                     </ul>
-                    <button className="w-full mt-4 bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold py-2 px-4 rounded">
-                        Schedule a New Call
-                    </button>
                 </div>
             </div>
             <div className="flex-1 min-h-[400px] md:min-h-0 flex flex-col">

@@ -109,7 +109,7 @@ export const CommunityView: React.FC<CommunityViewProps> = ({ users, destination
             <div className="mt-6">
                 {activeTab === 'team' && <TeamView teamMembers={teamMembers} />}
                 {activeTab === 'forum' && <ForumView destination={destination} currentUser={currentUser} users={users} />}
-                {activeTab === 'conference' && <ConferenceView teamMembers={teamMembers} />}
+                {activeTab === 'conference' && <ConferenceView teamMembers={teamMembers} destination={destination} />}
             </div>
         </div>
     );
